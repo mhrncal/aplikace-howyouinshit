@@ -194,6 +194,30 @@ class FlexibleXmlParser
             $columnData['custom_data'] = json_encode($customData, JSON_UNESCAPED_UNICODE);
         }
         
+        // AUTOMATICKÝ VÝPOČET CENY BEZ DPH
+        // Pro PRODUKTY: price_vat → price (bez DPH)
+        if (isset($columnData['price_vat']) && !empty($columnData['price_vat'])) {
+            $priceWithVat = (float) $columnData['price_vat'];
+            $vatRate = isset($columnData['vat_rate']) ? (float) $columnData['vat_rate'] : 21.0;
+            
+            // price = price_vat / (1 + vat_rate/100)
+            $columnData['price'] = round($priceWithVat / (1 + $vatRate / 100), 2);
+        }
+        
+        // Pro VARIANTY: price z XML je S DPH, uložit jako price_with_vat
+        // V Shoptet Marketing feedu je PRICE na variantě S DPH!
+        // Takže varianty mají naopak: price (s DPH) → potřebuju price_without_vat
+        // ALE product_variants tabulka má jen "price" sloupec
+        // Takže: PRICE z XML (4350 s DPH) → uložit jako price BEZ DPH
+        if (isset($columnData['price']) && !empty($columnData['price']) && !isset($columnData['price_vat'])) {
+            // Toto je varianta
+            $priceWithVat = (float) $columnData['price'];
+            $vatRate = 21.0; // Varianty nemají vat_rate, použij default
+            
+            // price = price_xml / (1 + 21/100) = cena bez DPH
+            $columnData['price'] = round($priceWithVat / (1 + $vatRate / 100), 2);
+        }
+        
         return $columnData;
     }
     
