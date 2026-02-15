@@ -304,27 +304,33 @@
         
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'dashboard.php') !== false ? 'active' : '' ?>" href="/dashboard.php">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'dashboard.php') !== false ? 'active' : '' ?>" href="/app/dashboard/">
                     <i class="bi bi-speedometer2"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'products.php') !== false ? 'active' : '' ?>" href="/products.php">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'products.php') !== false ? 'active' : '' ?>" href="/app/products/">
                     <i class="bi bi-box-seam"></i>
                     <span>Produkty</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'feed-sources.php') !== false ? 'active' : '' ?>" href="/feed-sources.php">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'feed-sources.php') !== false ? 'active' : '' ?>" href="/app/feed-sources/">
                     <i class="bi bi-link-45deg"></i>
                     <span>Feed zdroje</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'import-logs.php') !== false ? 'active' : '' ?>" href="/import-logs.php">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'import-logs.php') !== false ? 'active' : '' ?>" href="/app/import-logs/">
                     <i class="bi bi-clock-history"></i>
                     <span>Import logy</span>
+            <li class="nav-item">
+                <a class="nav-link" href="/app/costs/">
+                    <i class="bi bi-wallet2"></i>
+                    <span>Náklady</span>
+                </a>
+            </li>
                 </a>
             </li>
             
@@ -335,7 +341,7 @@
                 </div>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'users.php') !== false ? 'active' : '' ?>" href="/users.php">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'users.php') !== false ? 'active' : '' ?>" href="/app/users/">
                     <i class="bi bi-people"></i>
                     <span>Uživatelé</span>
                 </a>
@@ -343,13 +349,13 @@
             <?php endif; ?>
             
             <li class="nav-item mt-3">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'profile.php') !== false ? 'active' : '' ?>" href="/profile.php">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'profile.php') !== false ? 'active' : '' ?>" href="/app/settings/profile.php">
                     <i class="bi bi-person-circle"></i>
                     <span>Můj profil</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/logout.php">
+                <a class="nav-link" href="/app/auth/logout.php">
                     <i class="bi bi-box-arrow-right"></i>
                     <span>Odhlásit se</span>
                 </a>
