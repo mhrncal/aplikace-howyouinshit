@@ -199,7 +199,13 @@ Email: infoshopcode.cz
 Heslo: Shopcode2024??
 ```
 
-**⚠️ DŮLEŽITÉ:** Po prvním přihlášení změňte heslo!
+**⚠️ DŮLEŽITÉ:** Po prvním přihlášení změňte heslo v profilu!
+
+**Default Super Admin účet:**
+- Má přístup ke všem funkcím
+- Vidí data všech uživatelů  
+- Může vytvářet/upravovat/mazat uživatele
+- Může spravovat všechny feed zdroje
 
 ## 🔒 Bezpečnost
 

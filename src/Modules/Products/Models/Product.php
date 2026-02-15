@@ -5,7 +5,7 @@ namespace App\Modules\Products\Models;
 use App\Core\Database;
 
 /**
- * Product Model - Příklad modulu
+ * Product Model
  */
 class Product
 {
@@ -17,24 +17,39 @@ class Product
     }
 
     /**
-     * Získá všechny produkty pro uživatele
+     * Získá všechny produkty pro uživatele (s podporou Super Admina)
      */
-    public function getAll(int $userId, int $page = 1, int $perPage = 20): array
+    public function getAll(?int $userId, int $page = 1, int $perPage = 20): array
     {
         $offset = ($page - 1) * $perPage;
         
-        $products = $this->db->fetchAll(
-            "SELECT * FROM products 
-             WHERE user_id = ? 
-             ORDER BY created_at DESC 
-             LIMIT ? OFFSET ?",
-            [$userId, $perPage, $offset]
-        );
-        
-        $total = $this->db->fetchOne(
-            "SELECT COUNT(*) as count FROM products WHERE user_id = ?",
-            [$userId]
-        )['count'];
+        if ($userId === null || $userId === 0) {
+            // Super Admin - vidí vše
+            $products = $this->db->fetchAll(
+                "SELECT p.*, u.name as user_name, u.email as user_email 
+                 FROM products p
+                 LEFT JOIN users u ON p.user_id = u.id
+                 ORDER BY p.created_at DESC 
+                 LIMIT ? OFFSET ?",
+                [$perPage, $offset]
+            );
+            
+            $total = $this->db->fetchOne("SELECT COUNT(*) as count FROM products")['count'];
+        } else {
+            // Běžný uživatel - jen své produkty
+            $products = $this->db->fetchAll(
+                "SELECT * FROM products 
+                 WHERE user_id = ? 
+                 ORDER BY created_at DESC 
+                 LIMIT ? OFFSET ?",
+                [$userId, $perPage, $offset]
+            );
+            
+            $total = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM products WHERE user_id = ?",
+                [$userId]
+            )['count'];
+        }
         
         return [
             'products' => $products,
@@ -45,12 +60,22 @@ class Product
     /**
      * Získá produkt podle ID
      */
-    public function findById(int $id, int $userId): ?array
+    public function findById(int $id, ?int $userId): ?array
     {
-        return $this->db->fetchOne(
-            "SELECT * FROM products WHERE id = ? AND user_id = ?",
-            [$id, $userId]
-        );
+        if ($userId === null || $userId === 0) {
+            // Super Admin
+            return $this->db->fetchOne(
+                "SELECT p.*, u.name as user_name FROM products p 
+                 LEFT JOIN users u ON p.user_id = u.id 
+                 WHERE p.id = ?",
+                [$id]
+            );
+        } else {
+            return $this->db->fetchOne(
+                "SELECT * FROM products WHERE id = ? AND user_id = ?",
+                [$id, $userId]
+            );
+        }
     }
 
     /**
@@ -124,5 +149,99 @@ class Product
              LIMIT ?",
             [$userId, $limit]
         );
+    }
+
+    /**
+     * Získá varianty produktu
+     */
+    public function getVariants(int $productId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT * FROM product_variants WHERE product_id = ? ORDER BY name",
+            [$productId]
+        );
+    }
+
+    /**
+     * Všechny produkty pro export
+     */
+    public function getAllForExport(?int $userId): array
+    {
+        if ($userId === null || $userId === 0) {
+            return $this->db->fetchAll(
+                "SELECT * FROM products ORDER BY created_at DESC"
+            );
+        } else {
+            return $this->db->fetchAll(
+                "SELECT * FROM products WHERE user_id = ? ORDER BY created_at DESC",
+                [$userId]
+            );
+        }
+    }
+
+    /**
+     * Upsert produktu (insert nebo update podle GUID)
+     */
+    public function upsert(array $data): int
+    {
+        $existing = $this->db->fetchOne(
+            "SELECT id FROM products WHERE user_id = ? AND guid = ?",
+            [$data['user_id'], $data['guid']]
+        );
+
+        if ($existing) {
+            // Update
+            $this->db->update(
+                'products',
+                $data,
+                'id = ?',
+                [$existing['id']]
+            );
+            return $existing['id'];
+        } else {
+            // Insert
+            return $this->db->insert('products', $data);
+        }
+    }
+
+    /**
+     * Batch upsert produktů (pro import)
+     */
+    public function batchUpsert(array $products): array
+    {
+        $created = 0;
+        $updated = 0;
+        $failed = 0;
+
+        $this->db->beginTransaction();
+
+        try {
+            foreach ($products as $productData) {
+                $existing = $this->db->fetchOne(
+                    "SELECT id FROM products WHERE user_id = ? AND guid = ?",
+                    [$productData['user_id'], $productData['guid']]
+                );
+
+                if ($existing) {
+                    $this->db->update('products', $productData, 'id = ?', [$existing['id']]);
+                    $updated++;
+                } else {
+                    $this->db->insert('products', $productData);
+                    $created++;
+                }
+            }
+
+            $this->db->commit();
+
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            $failed = count($products);
+        }
+
+        return [
+            'created' => $created,
+            'updated' => $updated,
+            'failed' => $failed
+        ];
     }
 }
