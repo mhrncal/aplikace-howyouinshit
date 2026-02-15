@@ -252,13 +252,27 @@ class Product
                     // Update existujícího
                     $productData['updated_at'] = date('Y-m-d H:i:s');
                     $this->db->update('products', $productData, 'id = ?', [$existing['id']]);
+                    $productId = $existing['id'];
                     $updated++;
                 } else {
                     // Insert nového
                     $productData['created_at'] = date('Y-m-d H:i:s');
                     $productData['updated_at'] = date('Y-m-d H:i:s');
-                    $this->db->insert('products', $productData);
+                    $productId = $this->db->insert('products', $productData);
                     $inserted++;
+                }
+                
+                // Ulož varianty pokud existují
+                if (!empty($variants) && $productId) {
+                    // Smaž staré varianty
+                    $this->db->query("DELETE FROM product_variants WHERE product_id = ?", [$productId]);
+                    
+                    // Vlož nové
+                    foreach ($variants as $variant) {
+                        $variant['product_id'] = $productId;
+                        $variant['created_at'] = date('Y-m-d H:i:s');
+                        $this->db->insert('product_variants', $variant);
+                    }
                 }
             }
 
