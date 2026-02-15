@@ -34,27 +34,19 @@
 - [x] User model s validací
 - [x] Products model
 - [x] XML Import Service
+- [x] **Users modul KOMPLETNÍ**
+- [x] **Settings - Profil**
+- [x] **Costs modul KOMPLETNÍ s analytikou**
 
-## 🚀 CO DODĚL AT
+## 🚀 CO ZBÝVÁ DODĚLAT
 
-### 1️⃣ PRIORITA VYSOKÁ - Základní CRUD
-
-#### Users modul
-- [ ] `/app/users/index.php` - Seznam uživatelů
-- [ ] `/app/users/create.php` - Vytvoření uživatele
-- [ ] `/app/users/edit.php?id=X` - Úprava uživatele
-- [ ] Mazání uživatele (POST akce)
+### 1️⃣ PRIORITA VYSOKÁ - Produkty
 
 #### Products modul  
 - [ ] `/app/products/index.php` - Seznam produktů
 - [ ] `/app/products/detail.php?id=X` - Detail produktu + varianty
 - [ ] Export CSV
 - [ ] Filtrace a vyhledávání
-
-#### Settings modul
-- [ ] `/app/settings/profile.php` - Úprava profilu
-- [ ] `/app/settings/password.php` - Změna hesla
-- [ ] `/app/settings/company.php` - Firemní údaje
 
 ### 2️⃣ PRIORITA STŘEDNÍ - Feed Sources & Import
 
@@ -70,13 +62,6 @@
 - [ ] `/app/import-logs/detail.php?id=X` - Detail importu
 
 ### 3️⃣ PRIORITA NÍZKÁ - Rozšíření
-
-#### Costs modul (Náklady)
-- [ ] `/app/costs/index.php` - Seznam nákladů
-- [ ] `/app/costs/create.php` - Nový náklad
-- [ ] `/app/costs/edit.php?id=X` - Úprava nákladu
-- [ ] Kategorie nákladů (fixní, variabilní)
-- [ ] Přiřazení k obdobím
 
 #### Analytics modul
 - [ ] `/app/analytics/products.php` - Analytics produktů
