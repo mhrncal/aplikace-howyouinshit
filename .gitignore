@@ -19,8 +19,9 @@ composer.phar
 !/storage/cache/.gitkeep
 !/storage/sessions/.gitkeep
 
-# Configuration
-/config/database.php
+# Configuration - DON'T commit sensitive data
+# Uncomment in production:
+# /config/database.php
 /config/local.php
 .env
 .env.local
@@ -31,8 +32,6 @@ composer.phar
 .vscode/
 *.sublime-project
 *.sublime-workspace
-.DS_Store
-Thumbs.db
 
 # Build & Dependencies
 node_modules/
@@ -49,7 +48,7 @@ yarn-error.log
 *.sql.bak
 dump.sql
 
-# OS
+# OS files
 .DS_Store
 .DS_Store?
 ._*
@@ -57,3 +56,8 @@ dump.sql
 .Trashes
 ehthumbs.db
 Desktop.ini
+Thumbs.db
+
+# Uploaded files (if any)
+/public/uploads/*
+!/public/uploads/.gitkeep
