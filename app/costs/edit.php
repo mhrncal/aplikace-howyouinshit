@@ -38,7 +38,7 @@ if (isPost()) {
         'category' => post('category'),
         'start_date' => post('start_date'),
         'end_date' => post('end_date') ?: null,
-        'is_active' => post('is_active', '0') === '1',
+        'is_active' => post('is_active') === '1' ? 1 : 0,  // Explicitně 1 nebo 0
     ];
     
     // Validace
