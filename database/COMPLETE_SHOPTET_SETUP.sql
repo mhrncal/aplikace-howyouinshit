@@ -6,10 +6,13 @@
 ALTER TABLE products 
 ADD COLUMN IF NOT EXISTS `external_id` VARCHAR(100) NULL 
 COMMENT 'ID z feedu (SHOPITEM id="20929")' 
-AFTER `id`,
-ADD INDEX IF NOT EXISTS `idx_user_external` (`user_id`, `external_id`);
+AFTER `id`;
 
--- 2. Přidat url pokud chybí
+-- 2. Přidat index (může selhat pokud už existuje - ignoruj)
+ALTER TABLE products 
+ADD INDEX `idx_user_external` (`user_id`, `external_id`);
+
+-- 3. Přidat url pokud chybí
 ALTER TABLE products 
 ADD COLUMN IF NOT EXISTS `url` VARCHAR(500) NULL 
 COMMENT 'URL produktu' 
