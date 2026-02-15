@@ -21,11 +21,22 @@ class XmlImportService
         $this->productModel = new Product();
     }
     
+    private int $feedSourceId = 0;
+    private int $userId = 0;
+    
     /**
      * Helper pro logování importu (používá kategorii 'import')
      */
     private function logImport(string $level, string $message, array $context = []): void
     {
+        // Přidej user_id a feed_source_id pro LogManager
+        if ($this->userId > 0) {
+            $context['user_id'] = $this->userId;
+        }
+        if ($this->feedSourceId > 0) {
+            $context['feed_source_id'] = $this->feedSourceId;
+        }
+        
         $method = strtolower($level);
         Logger::$method($message, $context, 'import');
     }
@@ -35,6 +46,10 @@ class XmlImportService
      */
     public function importFromUrl(int $feedSourceId, int $userId, string $url, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
     {
+        // Ulož pro logging
+        $this->feedSourceId = $feedSourceId;
+        $this->userId = $userId;
+        
         $logId = $this->createImportLog($userId, $feedSourceId);
         
         try {
@@ -64,13 +79,14 @@ class XmlImportService
             ]);
             
             // Update feed source stats
-            $this->updateFeedSourceStats($feedSourceId, true, count($products), $duration);
+            $totalRecords = $result['imported'] + $result['updated'];
+            $this->updateFeedSourceStats($feedSourceId, true, $totalRecords, $duration);
             
             Logger::info('XML import completed', [
                 'feed_source_id' => $feedSourceId,
                 'user_id' => $userId,
-                'records' => count($products),
-                'created' => $result['created'],
+                'records' => $totalRecords,
+                'imported' => $result['imported'],
                 'updated' => $result['updated']
             ]);
             

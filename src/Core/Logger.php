@@ -78,6 +78,12 @@ class Logger
         $date = date('Y-m-d');
         $time = date('H:i:s');
         
+        // SPECIÁLNÍ: Import logy jdou přes LogManager do složek
+        if ($category === 'import' && isset($context['user_id']) && isset($context['feed_source_id'])) {
+            LogManager::log('import', "[$level] $message", $context, $context['user_id'], $context['feed_source_id']);
+            return;
+        }
+        
         // LOG SOUBOR podle KATEGORIE: import-2026-02-15.log, auth-2026-02-15.log
         $logFile = self::$logPath . "/{$category}-{$date}.log";
         
