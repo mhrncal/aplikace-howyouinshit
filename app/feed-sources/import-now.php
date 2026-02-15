@@ -132,19 +132,37 @@ ob_start();
                     addLog('📡 URL: <?= addslashes($feed['url']) ?>', 'info');
                     updateProgress(5, 'Připojuji se...', 'Zahájeno');
                     
+                    // CSRF token z meta tagu nebo session
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content || '<?= $_SESSION['csrf_token'] ?? '' ?>';
+                    
+                    addLog('🔑 CSRF token: ' + csrfToken.substring(0, 10) + '...', 'info');
+                    
                     fetch('/app/feed-sources/import-ajax.php', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/x-www-form-urlencoded',
                         },
-                        body: 'feed_id=<?= $feedId ?>&<?= csrf_token() ?>'
+                        body: 'feed_id=<?= $feedId ?>&csrf_token=' + encodeURIComponent(csrfToken)
                     })
                     .then(response => {
-                        addLog('📥 Odpověď ze serveru přijata', 'info');
+                        addLog('📥 Odpověď ze serveru přijata (HTTP ' + response.status + ')', 'info');
+                        
                         if (!response.ok) {
-                            throw new Error('HTTP ' + response.status);
+                            throw new Error('HTTP ' + response.status + ' ' + response.statusText);
                         }
-                        return response.json();
+                        
+                        // Přečti response jako text FIRST (pro debug)
+                        return response.text().then(text => {
+                            addLog('📄 Response délka: ' + text.length + ' znaků', 'info');
+                            
+                            try {
+                                return JSON.parse(text);
+                            } catch (e) {
+                                addLog('❌ Neplatný JSON! Prvních 200 znaků:', 'error');
+                                addLog(text.substring(0, 200), 'error');
+                                throw new Error('Server nevrátil JSON: ' + text.substring(0, 100));
+                            }
+                        });
                     })
                     .then(data => {
                         if (data.success) {
