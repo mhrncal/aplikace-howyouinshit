@@ -49,7 +49,7 @@ class User
     {
         return $this->db->fetchOne(
             "SELECT id, name, email, is_super_admin, is_active, company_name, 
-                    ico, dic, phone, created_at, updated_at
+                    ico, dic, phone, address, city, zip, country, created_at, updated_at
              FROM users 
              WHERE id = ?",
             [$id]
