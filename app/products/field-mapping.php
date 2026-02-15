@@ -22,7 +22,7 @@ if (isPost()) {
         $xmlPath = post('xml_path');
         $dataType = post('data_type', 'string');
         $defaultValue = post('default_value');
-        $entityType = post('entity_type', 'product');
+        $entityType = post('field_type', 'product');
         
         $data = [
             'user_id' => $userId,
@@ -30,7 +30,7 @@ if (isPost()) {
             'xml_path' => $xmlPath,
             'data_type' => $dataType,
             'default_value' => $defaultValue,
-            'entity_type' => $entityType,
+            'field_type' => $entityType,
             'is_active' => 1
         ];
         
@@ -240,7 +240,7 @@ ob_start();
             <form method="POST">
                 <?= csrf() ?>
                 <input type="hidden" name="action" value="save_mapping">
-                <input type="hidden" name="entity_type" id="modal_entity_type" value="product">
+                <input type="hidden" name="field_type" id="modal_field_type" value="product">
                 
                 <div class="modal-header">
                     <h5 class="modal-title">
@@ -328,7 +328,7 @@ ob_start();
 document.querySelectorAll('[data-bs-target="#addMappingModal"]').forEach(btn => {
     btn.addEventListener('click', function() {
         const entityType = this.getAttribute('data-entity');
-        document.getElementById('modal_entity_type').value = entityType;
+        document.getElementById('modal_field_type').value = entityType;
         document.getElementById('modal_title').textContent = 
             entityType === 'product' ? 'Nové mapování produktu' : 'Nové mapování varianty';
     });
