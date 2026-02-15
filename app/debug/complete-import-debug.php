@@ -134,19 +134,14 @@ echo "</div>";
 // ============================================================
 echo "<div class='step'><h2>KROK 4: Test parsování prvního SHOPITEM</h2>";
 
-// Najdi první SHOPITEM
-preg_match('/<SHOPITEM>(.*?)<\/SHOPITEM>/s', $xmlSample, $matches);
-
-if (empty($matches[1])) {
-    echo "<span class='err'>❌ Nenalezen žádný SHOPITEM v samplu!</span><br>";
-    echo "XML neobsahuje SHOPITEM elementy, nebo je struktura jiná.";
-} else {
+// Najdi první SHOPITEM - DOTALL flag pro víceřádkový XML
+if (preg_match('/<SHOPITEM[^>]*>(.*?)<\/SHOPITEM>/s', $xmlSample, $matches)) {
     $shopitemXml = '<SHOPITEM>' . $matches[1] . '</SHOPITEM>';
     echo "<span class='ok'>✅ Nalezen SHOPITEM</span><br><br>";
     
-    echo "<strong>SHOPITEM XML:</strong><pre>";
-    echo htmlspecialchars($shopitemXml);
-    echo "</pre>";
+    echo "<strong>SHOPITEM XML (prvních 1000 znaků):</strong><pre>";
+    echo htmlspecialchars(substr($shopitemXml, 0, 1000));
+    echo "\n...\n</pre>";
     
     // Parsuj pomocí FlexibleXmlParser
     try {
@@ -154,6 +149,7 @@ if (empty($matches[1])) {
         
         if (!$xml) {
             echo "<span class='err'>❌ Nelze parsovat XML!</span>";
+            echo "<br>Chyba: " . print_r(libxml_get_errors(), true);
         } else {
             $parser = new FlexibleXmlParser();
             $product = $parser->parseProduct($xml, $userId);
@@ -168,8 +164,13 @@ if (empty($matches[1])) {
             }
         }
     } catch (\Exception $e) {
-        echo "<span class='err'>❌ Parser error: " . $e->getMessage() . "</span>";
+        echo "<span class='err'>❌ Parser error: " . $e->getMessage() . "</span><br>";
+        echo "<pre>" . $e->getTraceAsString() . "</pre>";
     }
+} else {
+    echo "<span class='err'>❌ Nenalezen žádný SHOPITEM!</span><br>";
+    echo "XML struktura je jiná než očekáváno.<br>";
+    echo "Hledám pattern: &lt;SHOPITEM...&gt;...&lt;/SHOPITEM&gt;";
 }
 
 echo "</div>";
