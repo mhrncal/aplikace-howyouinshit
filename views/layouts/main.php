@@ -316,6 +316,12 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'field-mapping.php') !== false ? 'active' : '' ?>" href="/app/products/field-mapping.php">
+                    <i class="bi bi-diagram-3"></i>
+                    <span>Mapování polí</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'feed-sources.php') !== false ? 'active' : '' ?>" href="/app/feed-sources/">
                     <i class="bi bi-link-45deg"></i>
                     <span>Feed zdroje</span>
