@@ -21,13 +21,18 @@ ob_start();
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Analýza nákladů <?= $year ?></h2>
-    <div class="btn-group">
-        <a href="?year=<?= $year - 1 ?>" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> <?= $year - 1 ?>
-        </a>
-        <a href="?year=<?= date('Y') ?>" class="btn btn-primary">Aktuální rok</a>
-        <a href="?year=<?= $year + 1 ?>" class="btn btn-outline-secondary">
-            <?= $year + 1 ?> <i class="bi bi-arrow-right"></i>
+    <div class="d-flex gap-2">
+        <div class="btn-group">
+            <a href="?year=<?= $year - 1 ?>" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> <?= $year - 1 ?>
+            </a>
+            <a href="?year=<?= date('Y') ?>" class="btn btn-primary">Aktuální rok</a>
+            <a href="?year=<?= $year + 1 ?>" class="btn btn-outline-secondary">
+                <?= $year + 1 ?> <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+        <a href="/app/costs/quarterly.php" class="btn btn-info">
+            <i class="bi bi-calendar3 me-1"></i>Kvartální analýza
         </a>
     </div>
 </div>
