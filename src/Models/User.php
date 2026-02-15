@@ -96,6 +96,10 @@ class User
                 'ico' => $data['ico'] ?? null,
                 'dic' => $data['dic'] ?? null,
                 'phone' => $data['phone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'city' => $data['city'] ?? null,
+                'zip' => $data['zip'] ?? null,
+                'country' => $data['country'] ?? 'Česká republika',
             ]);
 
             Logger::info('User created', ['user_id' => $userId, 'email' => $data['email']]);
@@ -140,6 +144,10 @@ class User
                 'ico' => $data['ico'] ?? null,
                 'dic' => $data['dic'] ?? null,
                 'phone' => $data['phone'] ?? null,
+                'address' => $data['address'] ?? null,
+                'city' => $data['city'] ?? null,
+                'zip' => $data['zip'] ?? null,
+                'country' => $data['country'] ?? 'Česká republika',
             ];
 
             // Pouze super admin může měnit tyto hodnoty
