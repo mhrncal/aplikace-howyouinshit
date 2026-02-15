@@ -32,7 +32,7 @@ if (isPost()) {
     $data = [
         'name' => post('name'),
         'description' => post('description'),
-        'amount' => (float) post('amount'),
+        'amount' => (float) str_replace([' ', ','], ['', '.'], post('amount')),
         'type' => post('type'),
         'frequency' => post('frequency'),
         'category' => post('category'),

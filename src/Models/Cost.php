@@ -218,9 +218,17 @@ class Cost
         
         for ($month = 1; $month <= 12; $month++) {
             $data = $this->getMonthlyBreakdown($userId, $year, $month);
+            
+            // České názvy měsíců
+            $czechMonths = [
+                1 => 'Leden', 2 => 'Únor', 3 => 'Březen', 4 => 'Duben',
+                5 => 'Květen', 6 => 'Červen', 7 => 'Červenec', 8 => 'Srpen',
+                9 => 'Září', 10 => 'Říjen', 11 => 'Listopad', 12 => 'Prosinec'
+            ];
+            
             $overview['months'][$month] = [
                 'month' => $month,
-                'month_name' => date('F', mktime(0, 0, 0, $month, 1)),
+                'month_name' => $czechMonths[$month],
                 'total' => $data['total'],
                 'fixed' => $data['fixed'],
                 'variable' => $data['variable']

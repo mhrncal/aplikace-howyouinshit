@@ -10,13 +10,21 @@ $userId = $auth->userId();
 $page = (int) get('page', 1);
 
 // Filtry
-$filters = [
-    'type' => get('type'),
-    'frequency' => get('frequency'),
-    'category' => get('category'),
-];
+$filters = [];
 
-if (get('active') !== null) {
+if (!empty(get('type'))) {
+    $filters['type'] = get('type');
+}
+
+if (!empty(get('frequency'))) {
+    $filters['frequency'] = get('frequency');
+}
+
+if (!empty(get('category'))) {
+    $filters['category'] = get('category');
+}
+
+if (get('active') !== null && get('active') !== '') {
     $filters['is_active'] = get('active') === '1';
 }
 
