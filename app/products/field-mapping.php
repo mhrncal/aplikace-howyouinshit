@@ -277,6 +277,39 @@ ob_start();
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
+                                <label class="form-label">Kam uložit? <span class="text-danger">*</span></label>
+                                <select class="form-select" name="target_type" id="target_type" required>
+                                    <option value="column">📦 Standardní sloupec (rychlé vyhledávání)</option>
+                                    <option value="json">🔧 Custom pole (flexibilní)</option>
+                                </select>
+                                <div class="form-text">
+                                    <strong>Standardní sloupec:</strong> Rychlejší, ale omezený počet<br>
+                                    <strong>Custom pole:</strong> Neomezené, trochu pomalejší
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Transformer</label>
+                                <select class="form-select" name="transformer">
+                                    <option value="">Žádný</option>
+                                    <option value="strip_tags">strip_tags (odstraní HTML)</option>
+                                    <option value="trim">trim (odstraní mezery)</option>
+                                    <option value="strtoupper">VELKÁ PÍSMENA</option>
+                                    <option value="strtolower">malá písmena</option>
+                                    <option value="ucfirst">První velké</option>
+                                    <option value="ucwords">Každé Slovo Velké</option>
+                                </select>
+                                <div class="form-text">
+                                    Úprava hodnoty před uložením
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
                                 <label class="form-label">Typ dat</label>
                                 <select class="form-select" name="data_type">
                                     <option value="string">String (text)</option>
