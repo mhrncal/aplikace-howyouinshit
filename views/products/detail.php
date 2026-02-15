@@ -87,20 +87,25 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead>
+                    <table class="table table-hover table-sm mb-0">
+                        <thead class="table-light">
                             <tr>
                                 <th>Název varianty</th>
                                 <th>Kód</th>
                                 <th>EAN</th>
-                                <th>Cena</th>
+                                <th class="text-end">Nákupní cena</th>
+                                <th class="text-end">Prodejní cena</th>
+                                <th class="text-end">Akční cena</th>
+                                <th class="text-center">Sklad</th>
                                 <th>Dostupnost</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($variants as $variant): ?>
                             <tr>
-                                <td><?= e($variant['name'] ?? '-') ?></td>
+                                <td>
+                                    <strong><?= e($variant['name'] ?? '-') ?></strong>
+                                </td>
                                 <td>
                                     <?php if (!empty($variant['code'])): ?>
                                         <code><?= e($variant['code']) ?></code>
@@ -115,16 +120,41 @@
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
-                                    <?php if (!empty($variant['price'])): ?>
-                                        <strong><?= formatPrice($variant['price']) ?></strong>
+                                <td class="text-end">
+                                    <?php if (!empty($variant['purchase_price'])): ?>
+                                        <span class="text-muted"><?= formatPrice($variant['purchase_price']) ?></span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end">
+                                    <?php if (!empty($variant['standard_price'])): ?>
+                                        <strong class="text-primary"><?= formatPrice($variant['standard_price']) ?></strong>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-end">
+                                    <?php if (!empty($variant['action_price'])): ?>
+                                        <strong class="text-danger"><?= formatPrice($variant['action_price']) ?></strong>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center">
+                                    <?php if (isset($variant['stock'])): ?>
+                                        <?php if ($variant['stock'] > 0): ?>
+                                            <span class="badge bg-success"><?= number_format($variant['stock']) ?> ks</span>
+                                        <?php else: ?>
+                                            <span class="badge bg-danger">0 ks</span>
+                                        <?php endif; ?>
                                     <?php else: ?>
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if (!empty($variant['availability'])): ?>
-                                        <span class="badge bg-success"><?= e($variant['availability']) ?></span>
+                                    <?php if (!empty($variant['availability_status'])): ?>
+                                        <span class="badge bg-info"><?= e($variant['availability_status']) ?></span>
                                     <?php else: ?>
                                         <span class="badge bg-secondary">Nezadáno</span>
                                     <?php endif; ?>

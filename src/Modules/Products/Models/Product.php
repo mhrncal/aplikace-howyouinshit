@@ -51,6 +51,26 @@ class Product
             )['count'];
         }
         
+        // Přidání informací o variantách
+        foreach ($products as &$product) {
+            $variants = $this->getVariants($product['id']);
+            $product['variants'] = $variants;
+            $product['variant_count'] = count($variants);
+            
+            // Agregace cen a skladu z variant
+            if (!empty($variants)) {
+                $prices = array_filter(array_column($variants, 'standard_price'));
+                $stocks = array_column($variants, 'stock');
+                
+                if (!empty($prices)) {
+                    $product['price_min'] = min($prices);
+                    $product['price_max'] = max($prices);
+                }
+                
+                $product['total_stock'] = array_sum($stocks);
+            }
+        }
+        
         return [
             'products' => $products,
             'pagination' => paginate($total, $perPage, $page)

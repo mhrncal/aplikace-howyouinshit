@@ -63,28 +63,55 @@
                         <tr>
                             <td>
                                 <strong><?= e($product['name']) ?></strong>
-                                <?php if ($product['has_variants']): ?>
-                                    <br><small class="text-muted"><i class="bi bi-grid-3x3-gap me-1"></i>S variantami</small>
+                                <?php if ($product['variant_count'] > 0): ?>
+                                    <br><small class="text-muted"><i class="bi bi-grid-3x3-gap me-1"></i><?= $product['variant_count'] ?> <?= $product['variant_count'] == 1 ? 'varianta' : ($product['variant_count'] < 5 ? 'varianty' : 'variant') ?></small>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($product['code']): ?>
-                                    <div><?= e($product['code']) ?></div>
-                                <?php endif; ?>
-                                <?php if ($product['ean']): ?>
-                                    <small class="text-muted"><?= e($product['ean']) ?></small>
+                                <?php if ($product['variant_count'] > 0): ?>
+                                    <small class="text-muted d-block mb-1"><?= $product['variant_count'] ?> <?= $product['variant_count'] == 1 ? 'kód' : 'kódů' ?>:</small>
+                                    <?php 
+                                    $codes = array_filter(array_column($product['variants'], 'code'));
+                                    $eans = array_filter(array_column($product['variants'], 'ean'));
+                                    ?>
+                                    <?php if (!empty($codes)): ?>
+                                        <?php foreach (array_slice($codes, 0, 2) as $code): ?>
+                                            <div><code class="small"><?= e($code) ?></code></div>
+                                        <?php endforeach; ?>
+                                        <?php if (count($codes) > 2): ?>
+                                            <small class="text-muted">... +<?= count($codes) - 2 ?> dalších</small>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <?php if ($product['code']): ?>
+                                        <div><code><?= e($product['code']) ?></code></div>
+                                    <?php endif; ?>
+                                    <?php if ($product['ean']): ?>
+                                        <small class="text-muted"><?= e($product['ean']) ?></small>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                             <td><?= e($product['category'] ?? '-') ?></td>
                             <td>
-                                <strong class="text-primary"><?= formatPrice($product['standard_price']) ?></strong>
+                                <?php if ($product['variant_count'] > 0 && isset($product['price_min'])): ?>
+                                    <?php if ($product['price_min'] == $product['price_max']): ?>
+                                        <strong class="text-primary"><?= formatPrice($product['price_min']) ?></strong>
+                                    <?php else: ?>
+                                        <strong class="text-primary"><?= formatPrice($product['price_min']) ?> - <?= formatPrice($product['price_max']) ?></strong>
+                                    <?php endif; ?>
+                                <?php else: ?>
+                                    <strong class="text-primary"><?= formatPrice($product['standard_price']) ?></strong>
+                                <?php endif; ?>
                                 <?php if ($product['purchase_price']): ?>
                                     <br><small class="text-muted">Nákup: <?= formatPrice($product['purchase_price']) ?></small>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($product['stock'] > 0): ?>
-                                    <span class="badge bg-success"><?= number_format($product['stock']) ?> ks</span>
+                                <?php 
+                                $stock = $product['variant_count'] > 0 ? ($product['total_stock'] ?? 0) : $product['stock'];
+                                ?>
+                                <?php if ($stock > 0): ?>
+                                    <span class="badge bg-success"><?= number_format($stock) ?> ks</span>
                                 <?php else: ?>
                                     <span class="badge bg-danger">Vyprodáno</span>
                                 <?php endif; ?>
