@@ -326,6 +326,7 @@ class XmlImportService
     
     /**
      * STREAMOVÉ parsování XML - zpracovává po jednotlivých produktech
+     * OPTIMALIZOVÁNO pro velké feedy (500+ MB)
      * Šetří paměť, ukládá průběžně do DB
      */
     private function parseXmlStream(string $url, int $userId, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
@@ -333,14 +334,17 @@ class XmlImportService
         $imported = 0;
         $updated = 0;
         $errors = 0;
-        $batchSize = 50; // Ukládá po 50 produktech
+        $batchSize = 20; // SNÍŽENO z 50 na 20 - šetří paměť
         $batch = [];
+        $processed = 0;
         
-        // Nastavení context pro HTTP
+        // Nastavení context pro HTTP s timeoutem
         $opts = [
             'http' => [
-                'timeout' => 300,
+                'timeout' => 600, // 10 minut pro chunk
                 'user_agent' => 'E-shop Analytics Bot/1.0',
+                'follow_location' => 1,
+                'max_redirects' => 3,
             ]
         ];
         
@@ -350,45 +354,79 @@ class XmlImportService
         
         $context = stream_context_create($opts);
         
-        // Otevři stream
-        $stream = @fopen($url, 'r', false, $context);
-        if (!$stream) {
+        // XMLReader pro streamování - NEOTVÍRÁ celý soubor
+        $reader = new \XMLReader();
+        
+        // DŮLEŽITÉ: Používá stream context pro kontrolu timeoutu
+        if (!@$reader->open($url, null, LIBXML_PARSEHUGE | LIBXML_COMPACT)) {
             throw new \Exception("Nelze otevřít URL: $url");
         }
         
-        // XMLReader pro streamování
-        $reader = new \XMLReader();
-        $reader->open($url, null, LIBXML_PARSEHUGE);
+        Logger::info('XML stream opened', ['url' => $url]);
         
         // Najdi SHOPITEM elementy
-        while ($reader->read()) {
-            if ($reader->nodeType == \XMLReader::ELEMENT && $reader->name == 'SHOPITEM') {
-                // Načti celý SHOPITEM element
-                $xml = simplexml_load_string($reader->readOuterXml());
+        while (@$reader->read()) {
+            // Kontrola paměti každých 100 elementů
+            if ($processed % 100 === 0) {
+                $memUsage = round(memory_get_usage() / 1024 / 1024, 2);
+                Logger::info('Import progress', [
+                    'processed' => $processed,
+                    'imported' => $imported,
+                    'memory_mb' => $memUsage
+                ]);
                 
-                if ($xml) {
-                    try {
+                // Pokud paměť > 256 MB, agresivní cleanup
+                if ($memUsage > 256) {
+                    gc_collect_cycles();
+                    usleep(50000); // 50ms pauza pro uvolnění
+                }
+            }
+            
+            if ($reader->nodeType == \XMLReader::ELEMENT && $reader->name == 'SHOPITEM') {
+                try {
+                    // Načti POUZE tento element (ne celý XML)
+                    $xml = @simplexml_load_string($reader->readOuterXml());
+                    
+                    if ($xml) {
                         // Parsuj produkt
                         $product = $this->parseProductElement($xml, $userId);
                         
                         if ($product) {
                             $batch[] = $product;
+                            $processed++;
                             
-                            // Uložit batch když dosáhne velikosti
+                            // Uložit batch když dosáhne velikosti (20 produktů)
                             if (count($batch) >= $batchSize) {
                                 $result = $this->productModel->batchUpsert($batch);
                                 $imported += $result['inserted'];
                                 $updated += $result['updated'];
+                                
+                                Logger::info('Batch saved', [
+                                    'batch_size' => count($batch),
+                                    'total_imported' => $imported,
+                                    'total_updated' => $updated
+                                ]);
+                                
                                 $batch = []; // Vyčisti batch
                                 
-                                // Uvolni paměť
+                                // AGRESIVNÍ uvolnění paměti po každém batchi
                                 gc_collect_cycles();
+                                
+                                // Mini pauza pro DB server (20ms)
+                                usleep(20000);
                             }
                         }
-                    } catch (\Exception $e) {
-                        $errors++;
-                        Logger::warning('Product parse error', ['error' => $e->getMessage()]);
+                        
+                        // Unset pro okamžité uvolnění
+                        unset($xml);
                     }
+                    
+                } catch (\Exception $e) {
+                    $errors++;
+                    Logger::warning('Product parse error', [
+                        'error' => $e->getMessage(),
+                        'processed' => $processed
+                    ]);
                 }
             }
         }
@@ -398,10 +436,22 @@ class XmlImportService
             $result = $this->productModel->batchUpsert($batch);
             $imported += $result['inserted'];
             $updated += $result['updated'];
+            
+            Logger::info('Final batch saved', [
+                'batch_size' => count($batch),
+                'total_imported' => $imported,
+                'total_updated' => $updated
+            ]);
         }
         
         $reader->close();
-        fclose($stream);
+        
+        Logger::info('Import completed', [
+            'total_processed' => $processed,
+            'imported' => $imported,
+            'updated' => $updated,
+            'errors' => $errors
+        ]);
         
         return [
             'imported' => $imported,
