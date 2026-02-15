@@ -23,15 +23,19 @@ if (isPost()) {
         $success = true;
         
         if ($token) {
-            // TODO: Odeslat email s odkazem
+            // Generování reset linku
             $resetLink = baseUrl("reset-password.php?token={$token}");
+            
+            // V produkci by se poslal email přes SMTP
+            // Pro development/testování vypíšeme link do logu
             App\Core\Logger::info('Password reset requested', [
                 'email' => $email,
                 'reset_link' => $resetLink
             ]);
             
-            // V production prostředí by se email poslal přes SMTP
-            // Pro development vypíšeme link do logu
+            // DEVELOPMENT MODE: Zobrazíme link přímo uživateli
+            // V produkci toto SMAZAT!
+            $_SESSION['debug_reset_link'] = $resetLink;
         }
     }
 }
@@ -60,6 +64,19 @@ ob_start();
                                 <strong>Email odeslán!</strong><br>
                                 Pokud je email registrován v systému, obdržíte odkaz pro reset hesla.
                             </div>
+                            
+                            <?php if (isset($_SESSION['debug_reset_link'])): ?>
+                                <div class="alert alert-info" role="alert">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>DEVELOPMENT MODE:</strong><br>
+                                    Email není nakonfigurován. Použijte tento link:<br>
+                                    <a href="<?= e($_SESSION['debug_reset_link']) ?>" class="text-break">
+                                        <?= e($_SESSION['debug_reset_link']) ?>
+                                    </a>
+                                </div>
+                                <?php unset($_SESSION['debug_reset_link']); ?>
+                            <?php endif; ?>
+                            
                             <div class="text-center mt-4">
                                 <a href="/login.php" class="btn btn-outline-primary">
                                     <i class="bi bi-arrow-left me-2"></i>

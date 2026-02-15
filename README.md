@@ -193,19 +193,36 @@ server {
 
 ### 7. První přihlášení
 
+**Varianta A: Spustit setup.php (doporučeno)**
 ```
-URL: https://vase-domena.cz
-Email: infoshopcode.cz
+1. Otevřete v prohlížeči: https://vase-domena.cz/setup.php
+2. Klikněte na vytvoření Super Admina
+3. Poznamenejte si přihlašovací údaje
+4. SMAŽTE setup.php soubor!
+```
+
+**Varianta B: Přímé přihlášení (pokud DB už importovaná)**
+```
+URL: https://vase-domena.cz/login.php
+Email: info@shopcode.cz
 Heslo: Shopcode2024??
 ```
 
-**⚠️ DŮLEŽITÉ:** Po prvním přihlášení změňte heslo v profilu!
+**⚠️ DŮLEŽITÉ:** 
+- Po prvním přihlášení změňte heslo v profilu!
+- Smažte `setup.php` po dokončení instalace!
 
 **Default Super Admin účet:**
 - Má přístup ke všem funkcím
 - Vidí data všech uživatelů  
 - Může vytvářet/upravovat/mazat uživatele
 - Může spravovat všechny feed zdroje
+
+**🔧 Reset hesla (pokud jste zapomněli):**
+```
+1. Spusťte: https://vase-domena.cz/setup.php?reset_password=1
+2. Nové heslo: Shopcode2024??
+```
 
 ## 🔒 Bezpečnost
 

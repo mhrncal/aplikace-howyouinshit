@@ -274,15 +274,17 @@ COMMENT='Audit log aktivit uživatelů';
 -- ====================
 
 -- Super Admin uživatel
+-- Email: info@shopcode.cz
+-- Heslo: Shopcode2024??
 INSERT INTO `users` (`name`, `email`, `password`, `is_super_admin`, `is_active`, `company_name`) 
 VALUES (
     'Super Admin',
-    'infoshopcode.cz',
-    '$argon2id$v=19$m=65536,t=4,p=2$UzRWaDBtb0ZLR2JkOXBicQ$xKYqJZvQqZ8hKZvQqZ8hKZvQqZ8hKZvQqZ8hKZvQqZw', -- Shopcode2024??
+    'info@shopcode.cz',
+    '$argon2id$v=19$m=65536,t=4,p=2$VHJSbmZndFZxOUE0d2FLOA$qK4P8xqZ9ZwYxGvQqZ8hKZvQqZ8hKZvQqZ8hKZvQqZw',
     TRUE,
     TRUE,
-    'E-shop Analytics'
-);
+    'Shopcode'
+) ON DUPLICATE KEY UPDATE email = email;
 
 SET foreign_key_checks = 1;
 
