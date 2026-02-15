@@ -95,10 +95,9 @@ class XmlImportService
             
             return [
                 'success' => true,
-                'total' => count($products),
-                'created' => $result['created'],
+                'imported' => $result['imported'],
                 'updated' => $result['updated'],
-                'failed' => $result['failed'],
+                'errors' => $result['errors'] ?? 0,
                 'duration' => $duration
             ];
             
