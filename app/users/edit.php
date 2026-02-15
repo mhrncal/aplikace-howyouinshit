@@ -31,8 +31,8 @@ if (isPost()) {
     $data = [
         'name' => post('name'),
         'email' => post('email'),
-        'is_super_admin' => post('is_super_admin') === '1',
-        'is_active' => post('is_active') === '1',
+        'is_super_admin' => post('is_super_admin') === '1' ? 1 : 0,
+        'is_active' => post('is_active') === '1' ? 1 : 0,
         'company_name' => post('company_name'),
         'ico' => post('ico'),
         'dic' => post('dic'),
