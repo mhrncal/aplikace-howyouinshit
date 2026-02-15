@@ -1,0 +1,159 @@
+<?php
+require_once __DIR__ . '/../../bootstrap.php';
+
+$auth->requireAuth();
+
+use App\Core\Database;
+
+$db = Database::getInstance();
+$userId = $auth->userId();
+$isSuperAdmin = $auth->isSuperAdmin();
+
+// Statistiky
+$stats = [
+    'products' => $db->fetchOne(
+        "SELECT COUNT(*) as count FROM products WHERE " . ($isSuperAdmin ? "1=1" : "user_id = ?"),
+        $isSuperAdmin ? [] : [$userId]
+    )['count'],
+    'feed_sources' => $db->fetchOne(
+        "SELECT COUNT(*) as count FROM feed_sources WHERE " . ($isSuperAdmin ? "1=1" : "user_id = ?"),
+        $isSuperAdmin ? [] : [$userId]
+    )['count'],
+];
+
+if ($isSuperAdmin) {
+    $stats['users'] = $db->fetchOne("SELECT COUNT(*) as count FROM users")['count'];
+    $stats['users_active'] = $db->fetchOne("SELECT COUNT(*) as count FROM users WHERE is_active = 1")['count'];
+}
+
+// Poslední importy
+$recentImports = $db->fetchAll(
+    "SELECT il.*, u.name as user_name, fs.name as feed_name 
+     FROM import_logs il
+     LEFT JOIN users u ON il.user_id = u.id
+     LEFT JOIN feed_sources fs ON il.feed_source_id = fs.id
+     WHERE " . ($isSuperAdmin ? "1=1" : "il.user_id = ?") . "
+     ORDER BY il.created_at DESC
+     LIMIT 5",
+    $isSuperAdmin ? [] : [$userId]
+);
+
+$title = 'Dashboard';
+ob_start();
+?>
+
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <i class="bi bi-box-seam" style="font-size: 2rem; opacity: 0.8;"></i>
+            <h3><?= number_format($stats['products']) ?></h3>
+            <p>Produktů v databázi</p>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+            <i class="bi bi-link-45deg" style="font-size: 2rem; opacity: 0.8;"></i>
+            <h3><?= number_format($stats['feed_sources']) ?></h3>
+            <p>Feed zdrojů</p>
+        </div>
+    </div>
+    
+    <?php if ($isSuperAdmin): ?>
+    <div class="col-md-4 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+            <i class="bi bi-people" style="font-size: 2rem; opacity: 0.8;"></i>
+            <h3><?= number_format($stats['users_active']) ?> / <?= number_format($stats['users']) ?></h3>
+            <p>Aktivní uživatelé</p>
+        </div>
+    </div>
+    <?php endif; ?>
+</div>
+
+<div class="row">
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-clock-history me-2"></i>Poslední importy
+            </div>
+            <div class="card-body p-0">
+                <?php if (empty($recentImports)): ?>
+                    <div class="empty-state">
+                        <i class="bi bi-inbox"></i>
+                        <p class="mb-0">Zatím žádné importy</p>
+                    </div>
+                <?php else: ?>
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Feed</th>
+                                    <?php if ($isSuperAdmin): ?><th>Uživatel</th><?php endif; ?>
+                                    <th>Status</th>
+                                    <th>Záznamy</th>
+                                    <th>Čas</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($recentImports as $import): ?>
+                                <tr>
+                                    <td><?= e($import['feed_name'] ?? 'N/A') ?></td>
+                                    <?php if ($isSuperAdmin): ?>
+                                        <td><small><?= e($import['user_name']) ?></small></td>
+                                    <?php endif; ?>
+                                    <td>
+                                        <?php
+                                        $badges = [
+                                            'completed' => 'success',
+                                            'failed' => 'danger',
+                                            'processing' => 'warning',
+                                            'pending' => 'secondary'
+                                        ];
+                                        ?>
+                                        <span class="badge bg-<?= $badges[$import['status']] ?? 'secondary' ?>">
+                                            <?= ucfirst($import['status']) ?>
+                                        </span>
+                                    </td>
+                                    <td><?= number_format($import['processed_records']) ?></td>
+                                    <td><small><?= formatDate($import['created_at']) ?></small></td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-lightning-charge me-2"></i>Rychlé akce
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <a href="/app/products/index.php" class="btn btn-outline-primary w-100">
+                    <i class="bi bi-box-seam me-2"></i>Produkty
+                </a>
+            </div>
+            <?php if ($isSuperAdmin): ?>
+            <div class="col-md-3">
+                <a href="/app/users/index.php" class="btn btn-outline-success w-100">
+                    <i class="bi bi-people me-2"></i>Uživatelé
+                </a>
+            </div>
+            <?php endif; ?>
+            <div class="col-md-3">
+                <a href="/app/settings/profile.php" class="btn btn-outline-warning w-100">
+                    <i class="bi bi-person-circle me-2"></i>Můj profil
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../../views/layouts/main.php';
