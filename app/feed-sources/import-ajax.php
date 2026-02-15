@@ -16,7 +16,7 @@ try {
 }
 
 use App\Modules\FeedSources\Models\FeedSource;
-use App\Modules\Products\Services\XmlImportService;
+use App\Modules\Imports\Services\UniversalImportService;
 use App\Core\Logger;
 use App\Core\LogManager;
 
@@ -38,7 +38,7 @@ if (!$feed) {
     exit;
 }
 
-Logger::info('Feed loaded', ['feed' => $feed['name']]);
+Logger::info('Feed loaded', ['feed' => $feed['name'], 'feed_type' => $feed['feed_type']]);
 
 // VYČISTIT logy před importem
 LogManager::clearImportLogs($userId, $feedId);
@@ -54,15 +54,16 @@ ini_set('memory_limit', '512M');
 ini_set('max_execution_time', '0');
 
 try {
-    Logger::info('Starting import', ['url' => $feed['url']]);
+    Logger::info('Starting universal import', ['url' => $feed['url'], 'type' => $feed['feed_type']]);
     
-    $xmlImporter = new XmlImportService();
+    // UNIVERZÁLNÍ IMPORT - rozhodne podle typu
+    $importer = new UniversalImportService();
     
-    // Spusť import
-    $result = $xmlImporter->importFromUrl(
+    $result = $importer->import(
         $feedId,
         $userId,
         $feed['url'],
+        $feed['feed_type'] ?? $feed['type'], // Fallback na type pokud feed_type není
         $feed['http_auth_username'] ?? null,
         $feed['http_auth_password'] ?? null
     );
