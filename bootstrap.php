@@ -13,8 +13,16 @@ ini_set('log_errors', '1');
 // Timezone
 date_default_timezone_set('Europe/Prague');
 
+// Autoloader
+require_once __DIR__ . '/src/Core/Autoloader.php';
+App\Core\Autoloader::register();
+
 // Session
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() === PHP_SESSION_NONE || session_status() === PHP_SESSION_DISABLED) {
+    // Custom session handler pro případy kdy jsou sessions vypnuté
+    $handler = new App\Core\FileSessionHandler();
+    session_set_save_handler($handler, true);
+    
     ini_set('session.cookie_httponly', '1');
     // Pouze pokud je HTTPS
     if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
@@ -22,12 +30,9 @@ if (session_status() === PHP_SESSION_NONE) {
     }
     ini_set('session.use_strict_mode', '1');
     session_name('ESHOP_ANALYTICS_SESSION');
-    session_start();
+    
+    @session_start();
 }
-
-// Autoloader
-require_once __DIR__ . '/src/Core/Autoloader.php';
-App\Core\Autoloader::register();
 
 // Helper funkce
 require_once __DIR__ . '/src/helpers.php';
