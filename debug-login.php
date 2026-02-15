@@ -66,6 +66,10 @@ if ($user) {
 // Test 3: Kontrola hashe
 echo "<h2>3️⃣ Test hesla</h2>";
 
+// Zapnutí zobrazení chyb pro debug
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
 // Test podpory Argon2ID
 echo "<div class='box'>";
 echo "<strong>Server info:</strong><br>";
@@ -75,21 +79,33 @@ echo "PASSWORD_BCRYPT: <code>Podporováno ✅</code>";
 echo "</div>";
 
 // Vygeneruj nový hash pro srovnání
+echo "<div class='box'>";
+echo "<strong>Generuji nový hash...</strong><br>";
+flush();
+
 try {
     $newHash = Security::hashPassword($password);
     
-    echo "<div class='box'>";
-    echo "<strong>Test heslo:</strong> <code>{$password}</code><br><br>";
-    echo "<strong>Nově vygenerovaný hash (pro srovnání):</strong><br>";
-    echo "<pre style='word-break:break-all;'>{$newHash}</pre>";
-    echo "</div>";
-} catch (\Exception $e) {
+    if ($newHash) {
+        echo "✅ Hash vygenerován úspěšně!<br><br>";
+        echo "<strong>Test heslo:</strong> <code>{$password}</code><br><br>";
+        echo "<strong>Nově vygenerovaný hash (pro srovnání):</strong><br>";
+        echo "<pre style='word-break:break-all;'>{$newHash}</pre>";
+    } else {
+        echo "❌ Hash je prázdný!<br>";
+        $newHash = null;
+    }
+} catch (\Throwable $e) {
     echo "<div class='box error'>";
     echo "❌ <strong>CHYBA při generování hashe:</strong><br>";
-    echo htmlspecialchars($e->getMessage());
+    echo "Message: " . htmlspecialchars($e->getMessage()) . "<br>";
+    echo "File: " . htmlspecialchars($e->getFile()) . "<br>";
+    echo "Line: " . $e->getLine() . "<br>";
+    echo "Trace: <pre>" . htmlspecialchars($e->getTraceAsString()) . "</pre>";
     echo "</div>";
     $newHash = null;
 }
+echo "</div>";
 
 // Test password_verify s aktuálním hashem v DB
 $verifyResult = password_verify($password, $user['password']);
