@@ -285,54 +285,15 @@ class XmlImportService
     }
 
     /**
-     * Zajistí že existují výchozí mappingy (při prvním importu)
+     * Zajistí že existují výchozí mappingy (hardcoded, ne v DB)
      */
     private function ensureDefaultMappings(int $feedSourceId, int $userId): void
     {
-        $mappingModel = new \App\Modules\Products\Models\FieldMapping();
-        $existing = $mappingModel->getAllForUser($userId, $feedSourceId, 'product');
+        // VÝCHOZÍ MAPPINGY jsou nyní HARDCODED v getDefaultMappings()
+        // Neukládáme je do DB - uživatel je nemůže měnit
+        // V DB budou JEN custom mappingy přidané uživatelem
         
-        if (!empty($existing)) {
-            $this->logImport('info', 'Mappings already exist', ['count' => count($existing)]);
-            return;
-        }
-        
-        $this->logImport('info', 'Creating default mappings (first import)', []);
-        
-        $defaultMappings = [
-            ['db_column' => 'name', 'xml_path' => 'NAME', 'data_type' => 'string', 'target_type' => 'column', 'is_required' => 1],
-            ['db_column' => 'code', 'xml_path' => 'CODE', 'data_type' => 'string', 'target_type' => 'column', 'is_required' => 1],
-            ['db_column' => 'price_vat', 'xml_path' => 'PRICE_VAT', 'data_type' => 'float', 'target_type' => 'column', 'is_required' => 1],
-            ['db_column' => 'category', 'xml_path' => 'CATEGORY', 'data_type' => 'string', 'target_type' => 'column'],
-            ['db_column' => 'manufacturer', 'xml_path' => 'MANUFACTURER', 'data_type' => 'string', 'target_type' => 'column'],
-            ['db_column' => 'url', 'xml_path' => 'ORIG_URL', 'data_type' => 'string', 'target_type' => 'column'],
-            ['db_column' => 'image_url', 'xml_path' => 'IMAGE', 'data_type' => 'string', 'target_type' => 'column'],
-            ['db_column' => 'description', 'xml_path' => 'DESCRIPTION', 'data_type' => 'string', 'target_type' => 'column', 'transformer' => 'strip_tags'],
-            ['db_column' => 'ean', 'xml_path' => 'EAN', 'data_type' => 'string', 'target_type' => 'column'],
-        ];
-        
-        $created = 0;
-        foreach ($defaultMappings as $mapping) {
-            $data = array_merge($mapping, [
-                'user_id' => $userId,
-                'feed_source_id' => $feedSourceId,
-                'field_type' => 'product',
-                'is_active' => 1,
-            ]);
-            
-            try {
-                if ($mappingModel->create($userId, $data)) {
-                    $created++;
-                }
-            } catch (\Exception $e) {
-                $this->logImport('warning', 'Failed to create mapping', [
-                    'db_column' => $mapping['db_column'],
-                    'error' => $e->getMessage()
-                ]);
-            }
-        }
-        
-        $this->logImport('info', 'Default mappings created', ['count' => $created]);
+        $this->logImport('info', 'Using hardcoded default mappings (not in DB)', []);
     }
 
     /**

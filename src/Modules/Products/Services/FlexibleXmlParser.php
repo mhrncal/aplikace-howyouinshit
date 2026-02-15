@@ -23,19 +23,20 @@ class FlexibleXmlParser
     public function parseProduct(\SimpleXMLElement $item, int $userId): ?array
     {
         try {
-            // Načti mappingy pro tohoto uživatele
-            $mappings = $this->mappingModel->getAllForUser($userId, null, 'product');
+            // 1. HARDCODED VÝCHOZÍ MAPPINGY (vždy platí)
+            $defaultMappings = $this->getDefaultMappings('product');
             
-            // Pokud uživatel nemá mappingy, použij výchozí
-            if (empty($mappings)) {
-                $mappings = $this->getDefaultMappings('product');
-            }
+            // 2. CUSTOM MAPPINGY z DB (uživatel přidal)
+            $customMappings = $this->mappingModel->getAllForUser($userId, null, 'product');
+            
+            // 3. KOMBINUJ (custom mají přednost)
+            $allMappings = array_merge($defaultMappings, $customMappings);
             
             // Extrahuj všechna data z XML
             $rawData = $this->extractXmlData($item);
             
             // Rozdel na column data a custom_data podle mappingů
-            $prepared = $this->prepareData($rawData, $mappings, $userId);
+            $prepared = $this->prepareData($rawData, $allMappings, $userId);
             
             // Kontrola povinných polí
             if (empty($prepared['name'])) {
@@ -50,11 +51,10 @@ class FlexibleXmlParser
             // Parsuj varianty
             $variants = [];
             if (isset($item->VARIANTS->VARIANT)) {
-                $variantMappings = $this->mappingModel->getAllForUser($userId, null, 'variant');
-                
-                if (empty($variantMappings)) {
-                    $variantMappings = $this->getDefaultMappings('variant');
-                }
+                $variantMappings = array_merge(
+                    $this->getDefaultMappings('variant'),
+                    $this->mappingModel->getAllForUser($userId, null, 'variant')
+                );
                 
                 foreach ($item->VARIANTS->VARIANT as $variantXml) {
                     $variant = $this->parseVariant($variantXml, $variantMappings, $userId);
@@ -69,7 +69,7 @@ class FlexibleXmlParser
             Logger::info('Product parsed (flexible)', [
                 'name' => substr($prepared['name'], 0, 50),
                 'code' => $prepared['code'] ?? 'N/A',
-                'custom_fields' => count($prepared['custom_data'] ?? []),
+                'custom_fields' => count(json_decode($prepared['custom_data'] ?? '{}', true)),
                 'variants' => count($variants)
             ]);
             

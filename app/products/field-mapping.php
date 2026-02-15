@@ -88,13 +88,25 @@ ob_start();
 
 <!-- Info box -->
 <div class="alert alert-info">
-    <h5 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Co je to mapování polí?</h5>
-    <p class="mb-0">
-        Mapování určuje, které XML elementy z feedu se uloží do kterých sloupců v databázi. 
-        Například XML element <code>&lt;NAME&gt;</code> se mapuje na sloupec <code>name</code>.
-        <br><br>
-        <strong>Pokud změníš strukturu databáze</strong> (přidáš nový sloupec), můžeš zde přidat mapování a produkt se začne automaticky importovat do nového sloupce.
-    </p>
+    <h5 class="alert-heading"><i class="bi bi-info-circle me-2"></i>Výchozí vs. Custom pole</h5>
+    <div class="row">
+        <div class="col-md-6">
+            <h6>🔒 Výchozí pole (nelze měnit):</h6>
+            <small>
+                <strong>Povinná:</strong> name, code, price_vat<br>
+                <strong>Často používaná:</strong> category, manufacturer, url, image_url, description, ean
+            </small>
+            <p class="mt-2 mb-0"><em>Tato pole se VŽDY importují automaticky. Nelze je upravit ani smazat.</em></p>
+        </div>
+        <div class="col-md-6">
+            <h6>🔧 Custom pole (můžeš přidat):</h6>
+            <small>
+                Jakékoliv další pole z XML feedu (např. weight, color, supplier_code).
+                Uloží se do <code>custom_data</code> JSON sloupce.
+            </small>
+            <p class="mt-2 mb-0"><em>Klikni "Nové mapování" pro přidání vlastního pole.</em></p>
+        </div>
+    </div>
 </div>
 
 <!-- PRODUKTY -->
