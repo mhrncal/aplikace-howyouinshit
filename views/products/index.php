@@ -83,11 +83,14 @@
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 <?php else: ?>
-                                    <?php if ($product['code']): ?>
+                                    <?php if (!empty($product['code'])): ?>
                                         <div><code><?= e($product['code']) ?></code></div>
                                     <?php endif; ?>
-                                    <?php if ($product['ean']): ?>
+                                    <?php if (!empty($product['ean'])): ?>
                                         <small class="text-muted"><?= e($product['ean']) ?></small>
+                                    <?php endif; ?>
+                                    <?php if (empty($product['code']) && empty($product['ean'])): ?>
+                                        <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>
@@ -99,10 +102,12 @@
                                     <?php else: ?>
                                         <strong class="text-primary"><?= formatPrice($product['price_min']) ?> - <?= formatPrice($product['price_max']) ?></strong>
                                     <?php endif; ?>
-                                <?php else: ?>
+                                <?php elseif (!empty($product['standard_price'])): ?>
                                     <strong class="text-primary"><?= formatPrice($product['standard_price']) ?></strong>
+                                <?php else: ?>
+                                    <span class="text-muted">Není zadána</span>
                                 <?php endif; ?>
-                                <?php if ($product['purchase_price']): ?>
+                                <?php if (!empty($product['purchase_price'])): ?>
                                     <br><small class="text-muted">Nákup: <?= formatPrice($product['purchase_price']) ?></small>
                                 <?php endif; ?>
                             </td>
