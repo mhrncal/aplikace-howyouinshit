@@ -338,31 +338,54 @@ class XmlImportService
         $batch = [];
         $processed = 0;
         
-        // Nastavení context pro HTTP s timeoutem
-        $opts = [
-            'http' => [
-                'timeout' => 600, // 10 minut pro chunk
-                'user_agent' => 'E-shop Analytics Bot/1.0',
-                'follow_location' => 1,
-                'max_redirects' => 3,
-            ]
-        ];
+        // STÁHNOUT XML přes CURL do dočasného souboru (XMLReader neumí otevírat URL přímo)
+        $tempFile = tempnam(sys_get_temp_dir(), 'xml_import_');
+        
+        Logger::info('Downloading XML via CURL', ['url' => $url]);
+        
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 600);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Pro HTTPS
+        curl_setopt($ch, CURLOPT_USERAGENT, 'E-shop Analytics Bot/1.0');
         
         if ($httpAuthUser && $httpAuthPass) {
-            $opts['http']['header'] = "Authorization: Basic " . base64_encode("$httpAuthUser:$httpAuthPass");
+            curl_setopt($ch, CURLOPT_USERPWD, "$httpAuthUser:$httpAuthPass");
         }
         
-        $context = stream_context_create($opts);
+        // Stáhnout do souboru
+        $fp = fopen($tempFile, 'w+');
+        curl_setopt($ch, CURLOPT_FILE, $fp);
         
-        // XMLReader pro streamování - NEOTVÍRÁ celý soubor
+        $result = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $error = curl_error($ch);
+        
+        curl_close($ch);
+        fclose($fp);
+        
+        if ($result === false || $httpCode !== 200) {
+            unlink($tempFile);
+            throw new \Exception("Chyba stahování: HTTP {$httpCode}, {$error}");
+        }
+        
+        $fileSize = filesize($tempFile);
+        Logger::info('XML downloaded', [
+            'size_mb' => round($fileSize / 1024 / 1024, 2),
+            'temp_file' => $tempFile
+        ]);
+        
+        // XMLReader pro streamování ze souboru
         $reader = new \XMLReader();
         
-        // DŮLEŽITÉ: Používá stream context pro kontrolu timeoutu
-        if (!@$reader->open($url, null, LIBXML_PARSEHUGE | LIBXML_COMPACT)) {
-            throw new \Exception("Nelze otevřít URL: $url");
+        if (!@$reader->open($tempFile, null, LIBXML_PARSEHUGE | LIBXML_COMPACT)) {
+            unlink($tempFile);
+            throw new \Exception("Nelze otevřít dočasný XML soubor");
         }
         
-        Logger::info('XML stream opened', ['url' => $url]);
+        Logger::info('XML stream opened from temp file');
         
         $totalElements = 0;
         
@@ -381,7 +404,7 @@ class XmlImportService
             }
             
             // Kontrola paměti každých 100 produktů (ne elementů)
-            if ($processed % 100 === 0) {
+            if ($processed % 100 === 0 && $processed > 0) {
                 $memUsage = round(memory_get_usage() / 1024 / 1024, 2);
                 Logger::info('Import progress', [
                     'processed' => $processed,
@@ -459,6 +482,9 @@ class XmlImportService
         }
         
         $reader->close();
+        
+        // Smaž dočasný soubor
+        unlink($tempFile);
         
         Logger::info('Import completed', [
             'total_processed' => $processed,
