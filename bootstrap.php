@@ -24,8 +24,11 @@ if (session_status() === PHP_SESSION_NONE || session_status() === PHP_SESSION_DI
     session_set_save_handler($handler, true);
     
     ini_set('session.cookie_httponly', '1');
-    // Pouze pokud je HTTPS
-    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+    // HTTPS check - podporuje proxy (X-Forwarded-Proto)
+    $isHttps = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') 
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+    
+    if ($isHttps) {
         ini_set('session.cookie_secure', '1');
     }
     ini_set('session.use_strict_mode', '1');
