@@ -1,0 +1,280 @@
+<?php
+
+namespace App\Models;
+
+use App\Core\Database;
+
+class Cost
+{
+    private Database $db;
+
+    public function __construct()
+    {
+        $this->db = Database::getInstance();
+    }
+
+    /**
+     * Všechny náklady
+     */
+    public function getAll(int $userId, int $page = 1, int $perPage = 20, array $filters = []): array
+    {
+        $offset = ($page - 1) * $perPage;
+        
+        $where = ["user_id = ?"];
+        $params = [$userId];
+        
+        if (!empty($filters['type'])) {
+            $where[] = "type = ?";
+            $params[] = $filters['type'];
+        }
+        
+        if (!empty($filters['frequency'])) {
+            $where[] = "frequency = ?";
+            $params[] = $filters['frequency'];
+        }
+        
+        if (!empty($filters['category'])) {
+            $where[] = "category = ?";
+            $params[] = $filters['category'];
+        }
+        
+        if (isset($filters['is_active'])) {
+            $where[] = "is_active = ?";
+            $params[] = $filters['is_active'];
+        }
+        
+        $whereClause = implode(' AND ', $where);
+        
+        $costs = $this->db->fetchAll(
+            "SELECT * FROM costs 
+             WHERE {$whereClause}
+             ORDER BY created_at DESC 
+             LIMIT ? OFFSET ?",
+            array_merge($params, [$perPage, $offset])
+        );
+        
+        $total = $this->db->fetchOne(
+            "SELECT COUNT(*) as count FROM costs WHERE {$whereClause}",
+            $params
+        )['count'];
+        
+        return [
+            'costs' => $costs,
+            'pagination' => paginate($total, $perPage, $page)
+        ];
+    }
+
+    /**
+     * Najít podle ID
+     */
+    public function findById(int $id, int $userId): ?array
+    {
+        return $this->db->fetchOne(
+            "SELECT * FROM costs WHERE id = ? AND user_id = ?",
+            [$id, $userId]
+        );
+    }
+
+    /**
+     * Vytvořit náklad
+     */
+    public function create(array $data): int
+    {
+        return $this->db->insert('costs', $data);
+    }
+
+    /**
+     * Aktualizovat náklad
+     */
+    public function update(int $id, int $userId, array $data): bool
+    {
+        return $this->db->update('costs', $data, 'id = ? AND user_id = ?', [$id, $userId]) > 0;
+    }
+
+    /**
+     * Smazat náklad
+     */
+    public function delete(int $id, int $userId): bool
+    {
+        return $this->db->delete('costs', 'id = ? AND user_id = ?', [$id, $userId]) > 0;
+    }
+
+    /**
+     * Toggle aktivace
+     */
+    public function toggleActive(int $id, int $userId): bool
+    {
+        $cost = $this->findById($id, $userId);
+        if (!$cost) return false;
+        
+        return $this->db->update(
+            'costs',
+            ['is_active' => !$cost['is_active']],
+            'id = ? AND user_id = ?',
+            [$id, $userId]
+        ) > 0;
+    }
+
+    /**
+     * Kategorie nákladů
+     */
+    public function getCategories(int $userId): array
+    {
+        return $this->db->fetchAll(
+            "SELECT DISTINCT category FROM costs WHERE user_id = ? AND category IS NOT NULL ORDER BY category",
+            [$userId]
+        );
+    }
+
+    /**
+     * ANALYTIKA - Celkové náklady za období
+     */
+    public function getTotalForPeriod(int $userId, string $startDate, string $endDate): float
+    {
+        $result = $this->db->fetchOne(
+            "SELECT SUM(amount) as total FROM costs 
+             WHERE user_id = ? 
+             AND is_active = 1
+             AND start_date <= ?
+             AND (end_date IS NULL OR end_date >= ?)",
+            [$userId, $endDate, $startDate]
+        );
+        
+        return (float) ($result['total'] ?? 0);
+    }
+
+    /**
+     * ANALYTIKA - Měsíční náklady (včetně přepočtu frekvencí)
+     */
+    public function getMonthlyBreakdown(int $userId, int $year, int $month): array
+    {
+        $firstDay = date('Y-m-01', strtotime("$year-$month-01"));
+        $lastDay = date('Y-m-t', strtotime($firstDay));
+        
+        $costs = $this->db->fetchAll(
+            "SELECT * FROM costs 
+             WHERE user_id = ? 
+             AND is_active = 1
+             AND start_date <= ?
+             AND (end_date IS NULL OR end_date >= ?)",
+            [$userId, $lastDay, $firstDay]
+        );
+        
+        $breakdown = [
+            'fixed' => 0,
+            'variable' => 0,
+            'by_category' => [],
+            'by_frequency' => [],
+            'items' => []
+        ];
+        
+        foreach ($costs as $cost) {
+            // Přepočet na měsíční částku podle frekvence
+            $monthlyAmount = $this->convertToMonthly($cost['amount'], $cost['frequency']);
+            
+            // Typ
+            $breakdown[$cost['type']] += $monthlyAmount;
+            
+            // Kategorie
+            $category = $cost['category'] ?? 'Ostatní';
+            if (!isset($breakdown['by_category'][$category])) {
+                $breakdown['by_category'][$category] = 0;
+            }
+            $breakdown['by_category'][$category] += $monthlyAmount;
+            
+            // Frekvence
+            $freq = $cost['frequency'];
+            if (!isset($breakdown['by_frequency'][$freq])) {
+                $breakdown['by_frequency'][$freq] = 0;
+            }
+            $breakdown['by_frequency'][$freq] += $monthlyAmount;
+            
+            // Items
+            $breakdown['items'][] = array_merge($cost, [
+                'monthly_amount' => $monthlyAmount
+            ]);
+        }
+        
+        $breakdown['total'] = $breakdown['fixed'] + $breakdown['variable'];
+        
+        // Seřadit kategorie podle částky
+        arsort($breakdown['by_category']);
+        
+        return $breakdown;
+    }
+
+    /**
+     * ANALYTIKA - Roční přehled
+     */
+    public function getYearlyOverview(int $userId, int $year): array
+    {
+        $overview = [
+            'months' => [],
+            'total_year' => 0,
+            'avg_month' => 0,
+            'fixed_total' => 0,
+            'variable_total' => 0,
+        ];
+        
+        for ($month = 1; $month <= 12; $month++) {
+            $data = $this->getMonthlyBreakdown($userId, $year, $month);
+            $overview['months'][$month] = [
+                'month' => $month,
+                'month_name' => date('F', mktime(0, 0, 0, $month, 1)),
+                'total' => $data['total'],
+                'fixed' => $data['fixed'],
+                'variable' => $data['variable']
+            ];
+            $overview['total_year'] += $data['total'];
+            $overview['fixed_total'] += $data['fixed'];
+            $overview['variable_total'] += $data['variable'];
+        }
+        
+        $overview['avg_month'] = $overview['total_year'] / 12;
+        
+        return $overview;
+    }
+
+    /**
+     * Pomocná funkce - Přepočet na měsíční částku
+     */
+    private function convertToMonthly(float $amount, string $frequency): float
+    {
+        switch ($frequency) {
+            case 'daily':
+                return $amount * 30; // průměrný měsíc
+            case 'weekly':
+                return $amount * 4.33; // průměrný měsíc
+            case 'monthly':
+                return $amount;
+            case 'quarterly':
+                return $amount / 3;
+            case 'yearly':
+                return $amount / 12;
+            case 'once':
+                return 0; // jednorázový náklad se do měsíčního nepočítá
+            default:
+                return $amount;
+        }
+    }
+
+    /**
+     * ANALYTIKA - Srovnání období
+     */
+    public function comparePeriods(int $userId, string $period1Start, string $period1End, string $period2Start, string $period2End): array
+    {
+        $period1 = $this->getTotalForPeriod($userId, $period1Start, $period1End);
+        $period2 = $this->getTotalForPeriod($userId, $period2Start, $period2End);
+        
+        $difference = $period2 - $period1;
+        $percentChange = $period1 > 0 ? ($difference / $period1) * 100 : 0;
+        
+        return [
+            'period1' => $period1,
+            'period2' => $period2,
+            'difference' => $difference,
+            'percent_change' => $percentChange,
+            'trend' => $difference > 0 ? 'up' : ($difference < 0 ? 'down' : 'stable')
+        ];
+    }
+}
