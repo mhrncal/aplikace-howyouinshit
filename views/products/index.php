@@ -6,7 +6,7 @@
         <?php endif; ?>
     </div>
     <div class="d-flex gap-2">
-        <a href="/products.php?action=export" class="btn btn-outline-success">
+        <a href="/app/products/?action=export" class="btn btn-outline-success">
             <i class="bi bi-download me-2"></i>
             Export CSV
         </a>
@@ -16,7 +16,7 @@
 <!-- Search -->
 <div class="card mb-3">
     <div class="card-body">
-        <form method="GET" action="/products.php" class="row g-3">
+        <form method="GET" action="/app/products/" class="row g-3">
             <div class="col-md-10">
                 <input type="text" 
                        class="form-control" 
@@ -96,7 +96,7 @@
                             <?php endif; ?>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="/products.php?action=detail&id=<?= $product['id'] ?>" 
+                                    <a href="/app/products/?action=detail&id=<?= $product['id'] ?>" 
                                        class="btn btn-outline-primary"
                                        title="Detail">
                                         <i class="bi bi-eye"></i>
