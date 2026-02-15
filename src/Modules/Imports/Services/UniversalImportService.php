@@ -23,12 +23,13 @@ class UniversalImportService
         ]);
         
         // Podle typu feedu zvol správný parser
+        // Support pro starý i nový formát
         $result = match($feedType) {
-            'shoptet_products', 'products_xml' => $this->importProducts($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
+            'shoptet_products', 'products_xml', 'shoptet', 'xml' => $this->importProducts($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
             'shoptet_orders', 'orders_xml' => $this->importOrders($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
             'shoptet_stock', 'stock_xml' => $this->importStock($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
             'shoptet_prices', 'prices_xml' => $this->importPrices($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
-            default => throw new \Exception("Neznámý typ feedu: {$feedType}")
+            default => throw new \Exception("Neznámý typ feedu: {$feedType}. Podporované: shoptet_products, shoptet_orders, shoptet_stock, shoptet_prices")
         };
         
         Logger::info('Universal import completed', [
