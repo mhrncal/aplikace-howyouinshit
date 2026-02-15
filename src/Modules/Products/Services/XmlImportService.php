@@ -511,79 +511,50 @@ class XmlImportService
     
     /**
      * Parsuje jednotlivý SHOPITEM element (SHOPTET FORMÁT)
+     * POUŽÍVÁ KONFIGUROVATELNÝ FIELD MAPPING!
      */
     private function parseProductElement(\SimpleXMLElement $item, int $userId): ?array
     {
         try {
-            // SHOPTET používá NAME místo PRODUCT
-            $name = (string) ($item->NAME ?? $item->PRODUCT ?? '');
+            // Načti mapping konfiguraci
+            $mapping = \App\Modules\Products\Config\XmlFieldMapping::getProductMapping();
             
-            if (empty($name)) {
+            $product = ['user_id' => $userId];
+            
+            // Automatické mapování podle konfigurace
+            foreach ($mapping as $dbColumn => $config) {
+                $product[$dbColumn] = \App\Modules\Products\Config\XmlFieldMapping::getXmlValue($item, $config);
+            }
+            
+            // Kontrola povinných polí
+            if (empty($product['name'])) {
                 Logger::warning('Product without name', ['item_id' => (string) $item['id']]);
                 return null;
             }
             
-            $product = [
-                'user_id' => $userId,
-                'name' => $name,
-                'code' => (string) ($item->CODE ?? ''),
-                'ean' => '',
-                'manufacturer' => (string) ($item->MANUFACTURER ?? ''),
-                'category' => '',
-                'description' => strip_tags((string) ($item->DESCRIPTION ?? $item->SHORT_DESCRIPTION ?? '')),
-                'price' => (float) ($item->PRICE_VAT ?? 0),
-                'price_vat' => (float) ($item->PRICE_VAT ?? 0),
-                'url' => (string) ($item->ORIG_URL ?? $item->URL ?? ''),
-                'image_url' => '',
-                'availability' => 'Skladem',
-            ];
-            
-            // Kategorie - Shoptet má CATEGORIES/CATEGORY
-            if (isset($item->CATEGORIES->DEFAULT_CATEGORY)) {
-                $product['category'] = (string) $item->CATEGORIES->DEFAULT_CATEGORY;
-            } elseif (isset($item->CATEGORIES->CATEGORY)) {
-                $product['category'] = (string) $item->CATEGORIES->CATEGORY[0];
-            } elseif (isset($item->CATEGORYTEXT)) {
-                $product['category'] = (string) $item->CATEGORYTEXT;
-            }
-            
-            // Obrázky - Shoptet má IMAGES/IMAGE
-            if (isset($item->IMAGES->IMAGE)) {
-                $product['image_url'] = (string) $item->IMAGES->IMAGE[0];
-            } elseif (isset($item->IMGURL)) {
-                $product['image_url'] = (string) $item->IMGURL;
-            }
-            
-            // Varianty - Shoptet má VARIANTS/VARIANT
+            // Varianty - TAKÉ s field mappingem
             $variants = [];
             
             if (isset($item->VARIANTS->VARIANT)) {
-                // Produkt s variantami
+                $variantMapping = \App\Modules\Products\Config\XmlFieldMapping::getVariantMapping();
+                
                 foreach ($item->VARIANTS->VARIANT as $variant) {
-                    $variantName = '';
+                    $variantData = [];
                     
-                    // Název varianty z parametrů
-                    if (isset($variant->PARAMETERS->PARAMETER)) {
+                    foreach ($variantMapping as $dbColumn => $config) {
+                        $variantData[$dbColumn] = \App\Modules\Products\Config\XmlFieldMapping::getXmlValue($variant, $config);
+                    }
+                    
+                    // Speciální handling pro název varianty z parametrů
+                    if (empty($variantData['name']) && isset($variant->PARAMETERS->PARAMETER)) {
                         $params = [];
                         foreach ($variant->PARAMETERS->PARAMETER as $param) {
                             $params[] = (string) $param->VALUE;
                         }
-                        $variantName = implode(', ', $params);
+                        $variantData['name'] = implode(', ', $params);
                     }
                     
-                    $variants[] = [
-                        'name' => $variantName ?: 'Varianta',
-                        'code' => (string) ($variant->CODE ?? ''),
-                        'ean' => '',
-                        'price' => (float) ($variant->PRICE_VAT ?? 0),
-                        'availability' => (int) ($variant->STOCK->AMOUNT ?? 0) > 0 ? 'Skladem' : 'Není skladem',
-                    ];
-                }
-            } else {
-                // Produkt BEZ variant - má STOCK a PRICE_VAT přímo
-                if (isset($item->STOCK->AMOUNT)) {
-                    $amount = (int) $item->STOCK->AMOUNT;
-                    $product['availability'] = $amount > 0 ? 'Skladem' : 'Není skladem';
+                    $variants[] = $variantData;
                 }
             }
             
