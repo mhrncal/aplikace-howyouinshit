@@ -4,14 +4,15 @@ ini_set('display_errors', 1);
 
 echo "<h1>Debug Feed Sources Create</h1>";
 
+require_once __DIR__ . '/../../bootstrap.php';
+
+use App\Modules\FeedSources\Models\FeedSource;
+
 try {
-    require_once __DIR__ . '/../../bootstrap.php';
     echo "✅ Bootstrap loaded<br>";
     
     $auth->requireAuth();
     echo "✅ Auth OK<br>";
-    
-    use App\Modules\FeedSources\Models\FeedSource;
     
     $feedSourceModel = new FeedSource();
     echo "✅ FeedSource Model created<br>";

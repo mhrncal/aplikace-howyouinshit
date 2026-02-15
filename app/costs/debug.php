@@ -4,14 +4,15 @@ ini_set('display_errors', 1);
 
 echo "<h1>Debug Costs</h1>";
 
+require_once __DIR__ . '/../../bootstrap.php';
+
+use App\Models\Cost;
+
 try {
-    require_once __DIR__ . '/../../bootstrap.php';
     echo "✅ Bootstrap loaded<br>";
     
     $auth->requireAuth();
     echo "✅ Auth OK<br>";
-    
-    use App\Models\Cost;
     
     $costModel = new Cost();
     echo "✅ Cost Model created<br>";
