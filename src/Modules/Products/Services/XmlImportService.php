@@ -347,6 +347,9 @@ class XmlImportService
         $batch = [];
         $processed = 0;
         
+        // Vytvoř FlexibleXmlParser pro flexibilní parsing
+        $flexibleParser = new \App\Modules\Products\Services\FlexibleXmlParser();
+        
         // STÁHNOUT XML přes CURL do dočasného souboru (XMLReader neumí otevírat URL přímo)
         $tempFile = tempnam(sys_get_temp_dir(), 'xml_import_');
         
@@ -434,8 +437,8 @@ class XmlImportService
                     $xml = @simplexml_load_string($reader->readOuterXml());
                     
                     if ($xml) {
-                        // Parsuj produkt
-                        $product = $this->parseProductElement($xml, $userId);
+                        // Parsuj produkt - POUŽIJ FLEXIBLE PARSER
+                        $product = $flexibleParser->parseProduct($xml, $userId);
                         
                         if ($product) {
                             $batch[] = $product;
