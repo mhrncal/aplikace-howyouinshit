@@ -89,10 +89,21 @@ class LogManager
         };
         
         $timestamp = date('Y-m-d H:i:s');
-        $contextStr = !empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_UNICODE) : '';
-        $logLine = "[{$timestamp}] {$message}{$contextStr}\n";
+        $contextStr = !empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
+        $logLine = "[{$timestamp}] [{$type}] {$message}{$contextStr}\n";
+        
+        // Vytvoř složku pokud neexistuje
+        $dir = dirname($logFile);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0777, true);
+        }
         
         file_put_contents($logFile, $logLine, FILE_APPEND);
+        
+        // TAKÉ do hlavního logu pro přehled
+        if ($type !== 'app') {
+            file_put_contents(self::getAppLogPath(), $logLine, FILE_APPEND);
+        }
     }
     
     /**

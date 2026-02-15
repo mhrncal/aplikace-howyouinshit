@@ -4,6 +4,7 @@ namespace App\Modules\Products\Services;
 
 use App\Core\Database;
 use App\Core\Logger;
+use App\Core\LogManager;
 use App\Modules\Products\Models\Product;
 
 /**
