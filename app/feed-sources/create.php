@@ -38,8 +38,10 @@ if (isPost()) {
         // Nastav správný feed_type podle výběru
         $feedTypeMap = [
             'shoptet_products' => 'shoptet_products',
-            'xml' => 'shoptet_products', // Fallback
-            'shoptet' => 'shoptet_products', // Fallback
+            'shoptet_orders' => 'shoptet_orders',
+            'xml' => 'xml',
+            'json' => 'json',
+            'csv' => 'csv',
         ];
         
         $data['feed_type'] = $feedTypeMap[$data['feed_type']] ?? 'shoptet_products';
@@ -48,7 +50,45 @@ if (isPost()) {
         $feedId = $feedSourceModel->create($data);
         
         if ($feedId) {
-            flash('success', 'Feed zdroj byl úspěšně vytvořen! Spusť první import pro vytvoření mappingů.');
+            // AUTO-VYTVOŘENÍ výchozích mappingů pro Shoptet produkty
+            if ($data['feed_type'] === 'shoptet_products') {
+                $mappingModel = new \App\Modules\Products\Models\FieldMapping();
+                
+                $defaultMappings = [
+                    ['db_column' => 'name', 'xml_path' => 'NAME', 'data_type' => 'string', 'target_type' => 'column', 'is_required' => 1, 'is_default' => 1],
+                    ['db_column' => 'code', 'xml_path' => 'CODE', 'data_type' => 'string', 'target_type' => 'column', 'is_required' => 1, 'is_default' => 1],
+                    ['db_column' => 'price_vat', 'xml_path' => 'PRICE_VAT', 'data_type' => 'float', 'target_type' => 'column', 'is_required' => 1, 'is_default' => 1],
+                    ['db_column' => 'category', 'xml_path' => 'CATEGORY', 'data_type' => 'string', 'target_type' => 'column', 'is_default' => 1],
+                    ['db_column' => 'manufacturer', 'xml_path' => 'MANUFACTURER', 'data_type' => 'string', 'target_type' => 'column', 'is_default' => 1],
+                    ['db_column' => 'url', 'xml_path' => 'ORIG_URL', 'data_type' => 'string', 'target_type' => 'column', 'is_default' => 1],
+                    ['db_column' => 'image_url', 'xml_path' => 'IMAGE', 'data_type' => 'string', 'target_type' => 'column', 'is_default' => 1],
+                    ['db_column' => 'description', 'xml_path' => 'DESCRIPTION', 'data_type' => 'string', 'target_type' => 'column', 'transformer' => 'strip_tags', 'is_default' => 1],
+                    ['db_column' => 'ean', 'xml_path' => 'EAN', 'data_type' => 'string', 'target_type' => 'column', 'is_default' => 1],
+                ];
+                
+                $created = 0;
+                foreach ($defaultMappings as $mapping) {
+                    $mappingData = array_merge($mapping, [
+                        'user_id' => $userId,
+                        'feed_source_id' => $feedId,
+                        'field_type' => 'product',
+                        'is_active' => 1,
+                    ]);
+                    
+                    try {
+                        if ($mappingModel->create($userId, $mappingData)) {
+                            $created++;
+                        }
+                    } catch (\Exception $e) {
+                        // Ignoruj duplicity
+                    }
+                }
+                
+                flash('success', "Feed zdroj byl vytvořen a {$created} výchozích mappingů nastaveno!");
+            } else {
+                flash('success', 'Feed zdroj byl úspěšně vytvořen!');
+            }
+            
             redirect('/app/feed-sources/');
         } else {
             $errors[] = 'Nepodařilo se vytvořit feed zdroj';
