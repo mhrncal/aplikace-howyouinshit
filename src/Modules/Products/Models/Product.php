@@ -229,9 +229,19 @@ class Product
                 $variants = $productData['variants'] ?? [];
                 unset($productData['variants']);
                 
-                // Najdi existující produkt podle code
+                // Najdi existující produkt podle external_id (SHOPITEM id) nebo code
                 $existing = null;
-                if (!empty($productData['code'])) {
+                
+                // 1. Preferuj external_id (stabilní ID z feedu)
+                if (!empty($productData['external_id'])) {
+                    $existing = $this->db->fetchOne(
+                        "SELECT id FROM products WHERE user_id = ? AND external_id = ? LIMIT 1",
+                        [$productData['user_id'], $productData['external_id']]
+                    );
+                }
+                
+                // 2. Fallback na code pokud external_id není
+                if (!$existing && !empty($productData['code'])) {
                     $existing = $this->db->fetchOne(
                         "SELECT id FROM products WHERE user_id = ? AND code = ? LIMIT 1",
                         [$productData['user_id'], $productData['code']]

@@ -35,6 +35,11 @@ class FlexibleXmlParser
             // Extrahuj všechna data z XML
             $rawData = $this->extractXmlData($item);
             
+            // SHOPTET: Uložit ID z atributu jako external_id pro párování
+            if (isset($rawData['@id'])) {
+                $rawData['EXTERNAL_ID'] = $rawData['@id'];
+            }
+            
             // SHOPTET: Pokud CODE chybí na produktu, ale existuje na variantě, použij celý CODE varianty
             if (empty($rawData['CODE']) && isset($item->VARIANTS->VARIANT[0]->CODE)) {
                 $rawData['CODE'] = (string) $item->VARIANTS->VARIANT[0]->CODE;
@@ -238,6 +243,7 @@ class FlexibleXmlParser
     {
         if ($fieldType === 'product') {
             return [
+                ['db_column' => 'external_id', 'xml_path' => 'EXTERNAL_ID', 'data_type' => 'string', 'target_type' => 'column', 'is_active' => 1],
                 ['db_column' => 'name', 'xml_path' => 'NAME', 'data_type' => 'string', 'target_type' => 'column', 'is_active' => 1],
                 ['db_column' => 'code', 'xml_path' => 'CODE', 'data_type' => 'string', 'target_type' => 'column', 'is_active' => 1],
                 ['db_column' => 'manufacturer', 'xml_path' => 'MANUFACTURER', 'data_type' => 'string', 'target_type' => 'column', 'is_active' => 1],
