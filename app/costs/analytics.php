@@ -217,11 +217,164 @@ ob_start();
     </div>
 </div>
 
-<div class="mt-4 text-center">
+<!-- GRAFY -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-pie-chart me-2"></i>Roční náklady - graf
+            </div>
+            <div class="card-body">
+                <canvas id="yearlyChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-bar-chart me-2"></i>Kategorie (aktuální měsíc)
+            </div>
+            <div class="card-body">
+                <canvas id="categoryChart" height="250"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4 text-center d-flex gap-2 justify-content-center">
     <a href="/app/costs/" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left me-2"></i>Zpět na seznam nákladů
     </a>
+    <a href="/app/costs/export-pdf.php?type=yearly&year=<?= $year ?>" class="btn btn-danger" target="_blank">
+        <i class="bi bi-file-pdf me-2"></i>Export do PDF (celý rok)
+    </a>
+    <a href="/app/costs/export-pdf.php?type=monthly&year=<?= date('Y') ?>&month=<?= date('n') ?>" class="btn btn-danger" target="_blank">
+        <i class="bi bi-file-pdf me-2"></i>Export aktuálního měsíce
+    </a>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// GRAF 1: Roční vývoj nákladů
+const yearlyCtx = document.getElementById('yearlyChart').getContext('2d');
+new Chart(yearlyCtx, {
+    type: 'bar',
+    data: {
+        labels: [<?php 
+            foreach ($yearlyData['months'] as $m) {
+                echo "'" . $m['month_name'] . "',";
+            }
+        ?>],
+        datasets: [
+            {
+                label: 'Fixní',
+                data: [<?php 
+                    foreach ($yearlyData['months'] as $m) {
+                        echo $m['fixed'] . ",";
+                    }
+                ?>],
+                backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                borderColor: 'rgb(59, 130, 246)',
+                borderWidth: 1
+            },
+            {
+                label: 'Variabilní',
+                data: [<?php 
+                    foreach ($yearlyData['months'] as $m) {
+                        echo $m['variable'] . ",";
+                    }
+                ?>],
+                backgroundColor: 'rgba(249, 115, 22, 0.8)',
+                borderColor: 'rgb(249, 115, 22)',
+                borderWidth: 1
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            x: { stacked: true },
+            y: { 
+                stacked: true,
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString('cs-CZ') + ' Kč';
+                    }
+                }
+            }
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: 'Měsíční náklady <?= $year ?>'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        return context.dataset.label + ': ' + 
+                               context.parsed.y.toLocaleString('cs-CZ') + ' Kč';
+                    }
+                }
+            }
+        }
+    }
+});
+
+// GRAF 2: Kategorie (koláčový)
+const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+new Chart(categoryCtx, {
+    type: 'pie',
+    data: {
+        labels: [<?php 
+            foreach ($currentMonthData['by_category'] as $cat => $amount) {
+                echo "'" . addslashes($cat) . "',";
+            }
+        ?>],
+        datasets: [{
+            data: [<?php 
+                foreach ($currentMonthData['by_category'] as $amount) {
+                    echo $amount . ",";
+                }
+            ?>],
+            backgroundColor: [
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(249, 115, 22, 0.8)',
+                'rgba(34, 197, 94, 0.8)',
+                'rgba(168, 85, 247, 0.8)',
+                'rgba(236, 72, 153, 0.8)',
+                'rgba(14, 165, 233, 0.8)',
+                'rgba(251, 146, 60, 0.8)',
+                'rgba(132, 204, 22, 0.8)',
+            ],
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            title: {
+                display: true,
+                text: 'Náklady podle kategorií (<?= date('n') ?>. měsíc)'
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed;
+                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return label + ': ' + value.toLocaleString('cs-CZ') + ' Kč (' + percentage + '%)';
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
 
 <?php
 $content = ob_get_clean();
