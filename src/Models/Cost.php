@@ -169,8 +169,8 @@ class Cost
         ];
         
         foreach ($costs as $cost) {
-            // Přepočet na měsíční částku podle frekvence
-            $monthlyAmount = $this->convertToMonthly($cost['amount'], $cost['frequency']);
+            // Přepočet na měsíční částku podle frekvence S PŘESNÝMI DNY
+            $monthlyAmount = $this->convertToMonthly($cost['amount'], $cost['frequency'], $year, $month);
             
             // Typ
             $breakdown[$cost['type']] += $monthlyAmount;
@@ -244,15 +244,39 @@ class Cost
     }
 
     /**
-     * Pomocná funkce - Přepočet na měsíční částku
+     * Pomocná funkce - Přepočet na měsíční částku PŘESNĚ podle dní v měsíci
      */
-    private function convertToMonthly(float $amount, string $frequency): float
+    private function convertToMonthly(float $amount, string $frequency, int $year = null, int $month = null): float
     {
+        // Pokud není zadán rok/měsíc, použij průměr
+        if ($year === null || $month === null) {
+            switch ($frequency) {
+                case 'daily':
+                    return $amount * 30.44; // průměrný měsíc (365.25/12)
+                case 'weekly':
+                    return $amount * 4.35; // průměrný měsíc (52.18/12)
+                case 'monthly':
+                    return $amount;
+                case 'quarterly':
+                    return $amount / 3;
+                case 'yearly':
+                    return $amount / 12;
+                case 'once':
+                    return 0;
+                default:
+                    return $amount;
+            }
+        }
+        
+        // Přesný výpočet podle konkrétního měsíce
+        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+        $weeksInMonth = $daysInMonth / 7;
+        
         switch ($frequency) {
             case 'daily':
-                return $amount * 30; // průměrný měsíc
+                return $amount * $daysInMonth; // přesný počet dní (28-31)
             case 'weekly':
-                return $amount * 4.33; // průměrný měsíc
+                return $amount * $weeksInMonth; // přesný počet týdnů
             case 'monthly':
                 return $amount;
             case 'quarterly':
@@ -260,7 +284,7 @@ class Cost
             case 'yearly':
                 return $amount / 12;
             case 'once':
-                return 0; // jednorázový náklad se do měsíčního nepočítá
+                return 0;
             default:
                 return $amount;
         }
@@ -284,5 +308,131 @@ class Cost
             'percent_change' => $percentChange,
             'trend' => $difference > 0 ? 'up' : ($difference < 0 ? 'down' : 'stable')
         ];
+    }
+    
+    /**
+     * ANALYTIKA - Týdenní náklady
+     */
+    public function getWeeklyBreakdown(int $userId, int $year, int $week): array
+    {
+        // Najít první a poslední den týdne
+        $dto = new \DateTime();
+        $dto->setISODate($year, $week);
+        $firstDay = $dto->format('Y-m-d');
+        $dto->modify('+6 days');
+        $lastDay = $dto->format('Y-m-d');
+        
+        $costs = $this->db->fetchAll(
+            "SELECT * FROM costs 
+             WHERE user_id = ? 
+             AND is_active = 1
+             AND start_date <= ?
+             AND (end_date IS NULL OR end_date >= ?)",
+            [$userId, $lastDay, $firstDay]
+        );
+        
+        $breakdown = [
+            'fixed' => 0,
+            'variable' => 0,
+            'by_category' => [],
+            'total' => 0,
+            'first_day' => $firstDay,
+            'last_day' => $lastDay,
+        ];
+        
+        foreach ($costs as $cost) {
+            $weeklyAmount = $this->convertToWeekly($cost['amount'], $cost['frequency']);
+            
+            $breakdown[$cost['type']] += $weeklyAmount;
+            
+            $category = $cost['category'] ?? 'Ostatní';
+            if (!isset($breakdown['by_category'][$category])) {
+                $breakdown['by_category'][$category] = 0;
+            }
+            $breakdown['by_category'][$category] += $weeklyAmount;
+        }
+        
+        $breakdown['total'] = $breakdown['fixed'] + $breakdown['variable'];
+        arsort($breakdown['by_category']);
+        
+        return $breakdown;
+    }
+    
+    /**
+     * ANALYTIKA - Kvartální náklady  
+     */
+    public function getQuarterlyBreakdown(int $userId, int $year, int $quarter): array
+    {
+        $quarterMonths = [
+            1 => [1, 3], 2 => [4, 6], 3 => [7, 9], 4 => [10, 12]
+        ];
+        
+        [$firstMonth, $lastMonth] = $quarterMonths[$quarter];
+        
+        $breakdown = [
+            'fixed' => 0,
+            'variable' => 0,
+            'by_category' => [],
+            'by_month' => [],
+            'total' => 0,
+            'quarter' => $quarter,
+            'year' => $year,
+        ];
+        
+        $czechMonths = [
+            1 => 'Leden', 2 => 'Únor', 3 => 'Březen', 4 => 'Duben',
+            5 => 'Květen', 6 => 'Červen', 7 => 'Červenec', 8 => 'Srpen',
+            9 => 'Září', 10 => 'Říjen', 11 => 'Listopad', 12 => 'Prosinec'
+        ];
+        
+        for ($m = $firstMonth; $m <= $lastMonth; $m++) {
+            $monthData = $this->getMonthlyBreakdown($userId, $year, $m);
+            
+            $breakdown['by_month'][$m] = [
+                'month' => $m,
+                'month_name' => $czechMonths[$m],
+                'total' => $monthData['total'],
+                'fixed' => $monthData['fixed'],
+                'variable' => $monthData['variable'],
+            ];
+            
+            $breakdown['fixed'] += $monthData['fixed'];
+            $breakdown['variable'] += $monthData['variable'];
+            
+            foreach ($monthData['by_category'] as $cat => $amt) {
+                if (!isset($breakdown['by_category'][$cat])) {
+                    $breakdown['by_category'][$cat] = 0;
+                }
+                $breakdown['by_category'][$cat] += $amt;
+            }
+        }
+        
+        $breakdown['total'] = $breakdown['fixed'] + $breakdown['variable'];
+        arsort($breakdown['by_category']);
+        
+        return $breakdown;
+    }
+    
+    /**
+     * POMOCNÁ - Převod na týdenní částku
+     */
+    private function convertToWeekly(float $amount, string $frequency): float
+    {
+        switch ($frequency) {
+            case 'daily':
+                return $amount * 7;
+            case 'weekly':
+                return $amount;
+            case 'monthly':
+                return $amount / 4.35;
+            case 'quarterly':
+                return $amount / 13;
+            case 'yearly':
+                return $amount / 52.18;
+            case 'once':
+                return 0;
+            default:
+                return $amount;
+        }
     }
 }
