@@ -38,18 +38,10 @@ if (isPost()) {
     $action = post('action');
     $costId = (int) post('cost_id');
     
-    switch ($action) {
-        case 'toggle_active':
-            if ($costModel->toggleActive($costId, $userId)) {
-                flash('success', 'Status změněn');
-            }
-            break;
-            
-        case 'delete':
-            if ($costModel->delete($costId, $userId)) {
-                flash('success', 'Náklad smazán');
-            }
-            break;
+    if ($action === 'delete') {
+        if ($costModel->delete($costId, $userId)) {
+            flash('success', 'Náklad smazán');
+        }
     }
     
     redirect('/app/costs/');
@@ -263,18 +255,11 @@ ob_start();
                                 </small>
                             </td>
                             <td>
-                                <form method="POST" class="d-inline">
-                                    <?= csrf() ?>
-                                    <input type="hidden" name="action" value="toggle_active">
-                                    <input type="hidden" name="cost_id" value="<?= $cost['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-link p-0">
-                                        <?php if ($cost['is_active']): ?>
-                                            <span class="badge bg-success">Aktivní</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary">Neaktivní</span>
-                                        <?php endif; ?>
-                                    </button>
-                                </form>
+                                <?php if ($cost['is_active']): ?>
+                                    <span class="badge bg-success">Aktivní</span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary">Neaktivní</span>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
