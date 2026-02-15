@@ -69,9 +69,7 @@ echo "<h2>Test 3: Co když aktualizujeme hash v DB?</h2>";
 if (isset($_GET['update_db'])) {
     require_once __DIR__ . '/bootstrap.php';
     
-    use App\Core\Database;
-    
-    $db = Database::getInstance();
+    $db = \App\Core\Database::getInstance();
     
     // Použij BCRYPT (funguje všude)
     $newHash = password_hash($password, PASSWORD_BCRYPT);
