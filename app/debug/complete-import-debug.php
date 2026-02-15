@@ -179,11 +179,25 @@ echo "</div>";
 echo "<div class='step'><h2>KROK 5: Test uložení do DB</h2>";
 
 if (isset($product) && $product) {
+    echo "<strong>Data která jdou do batchUpsert:</strong><pre>";
+    print_r($product);
+    echo "</pre>";
+    
+    // Kontrola povinných polí
+    echo "<br><strong>Kontrola povinných polí:</strong><br>";
+    echo "name: " . (isset($product['name']) && $product['name'] ? "<span class='ok'>✅ " . $product['name'] . "</span>" : "<span class='err'>❌ CHYBÍ!</span>") . "<br>";
+    echo "code: " . (isset($product['code']) && $product['code'] ? "<span class='ok'>✅ " . $product['code'] . "</span>" : "<span class='err'>❌ CHYBÍ!</span>") . "<br>";
+    echo "user_id: " . (isset($product['user_id']) ? "<span class='ok'>✅ " . $product['user_id'] . "</span>" : "<span class='err'>❌ CHYBÍ!</span>") . "<br>";
+    
     $productModel = new Product();
     
-    echo "Pokusím se uložit produkt do DB...<br>";
+    echo "<br>Pokusím se uložit produkt do DB...<br>";
+    
+    // Zapni error reporting v DB
+    $db = App\Core\Database::getInstance();
     
     try {
+        // Test s JEDNÍM produktem
         $result = $productModel->batchUpsert([$product]);
         
         echo "<span class='ok'>✅ batchUpsert proběhl</span><br>";
@@ -195,7 +209,6 @@ if (isset($product) && $product) {
             echo "<span class='ok'>✅✅✅ PRODUKT ULOŽEN DO DB!</span><br>";
             
             // Zkontroluj v DB
-            $db = App\Core\Database::getInstance();
             $saved = $db->fetchOne("SELECT * FROM products WHERE user_id = ? ORDER BY id DESC LIMIT 1", [$userId]);
             
             if ($saved) {
@@ -205,7 +218,24 @@ if (isset($product) && $product) {
             }
         } else {
             echo "<span class='err'>❌ Produkt se NEULOŽIL!</span><br>";
-            echo "inserted: {$result['inserted']}, updated: {$result['updated']}";
+            echo "inserted: {$result['inserted']}, updated: {$result['updated']}, failed: {$result['failed']}<br><br>";
+            
+            // Zkus zjistit proč
+            echo "<strong>Pokus o direct INSERT pro zjištění chyby:</strong><br>";
+            try {
+                $testData = [
+                    'user_id' => $product['user_id'],
+                    'name' => $product['name'],
+                    'code' => $product['code'] ?? 'TEST',
+                    'price_vat' => $product['price_vat'] ?? 0,
+                ];
+                
+                $db->insert('products', $testData);
+                echo "<span class='ok'>✅ Direct INSERT funguje! Problém je v batchUpsert logice.</span>";
+            } catch (\Exception $e) {
+                echo "<span class='err'>❌ Direct INSERT selhal: " . $e->getMessage() . "</span><br>";
+                echo "SQL error: " . $e->getCode() . "<br>";
+            }
         }
         
     } catch (\Exception $e) {
@@ -214,6 +244,8 @@ if (isset($product) && $product) {
         echo "Line: " . $e->getLine() . "<br>";
         echo "<pre>" . $e->getTraceAsString() . "</pre>";
     }
+} else {
+    echo "<span class='warn'>⚠️ Produkt nebyl parsován, nelze testovat DB.</span>";
 }
 
 echo "</div>";
