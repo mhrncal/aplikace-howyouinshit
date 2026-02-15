@@ -9,7 +9,7 @@ COMMENT 'URL produktu'
 AFTER `description`;
 
 -- 2. Oprav mappingy podle skutečné struktury Shoptet Marketing feedu
-UPDATE field_mappings SET xml_path = '@id' WHERE user_id = 1 AND feed_source_id = 7 AND db_column = 'code';
+UPDATE field_mappings SET xml_path = 'CODE' WHERE user_id = 1 AND feed_source_id = 7 AND db_column = 'code';
 UPDATE field_mappings SET xml_path = 'NAME' WHERE user_id = 1 AND feed_source_id = 7 AND db_column = 'name';
 UPDATE field_mappings SET xml_path = 'PRICE' WHERE user_id = 1 AND feed_source_id = 7 AND db_column = 'price_vat';
 UPDATE field_mappings SET xml_path = 'CATEGORY' WHERE user_id = 1 AND feed_source_id = 7 AND db_column = 'category';

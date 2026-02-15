@@ -35,6 +35,15 @@ class FlexibleXmlParser
             // Extrahuj všechna data z XML
             $rawData = $this->extractXmlData($item);
             
+            // SHOPTET FIX: Pokud CODE chybí, ale existují varianty, extrahuj z první varianty
+            if (empty($rawData['CODE']) && isset($item->VARIANTS->VARIANT[0]->CODE)) {
+                $variantCode = (string) $item->VARIANTS->VARIANT[0]->CODE;
+                // Extrahuj prefix (např. "20929/L-" → "20929")
+                if (preg_match('/^(\d+)/', $variantCode, $matches)) {
+                    $rawData['CODE'] = $matches[1];
+                }
+            }
+            
             // Rozdel na column data a custom_data podle mappingů
             $prepared = $this->prepareData($rawData, $allMappings, $userId);
             
