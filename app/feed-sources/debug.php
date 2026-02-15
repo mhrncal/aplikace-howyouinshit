@@ -18,11 +18,23 @@ try {
         die("Auth not initialized in bootstrap!");
     }
     
-    echo "3. Calling requireAuth()...<br>";
+    echo "3. Checking session...<br>";
+    echo "Session ID: " . session_id() . "<br>";
+    echo "Logged in: " . (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] ? 'YES' : 'NO') . "<br>";
+    if (isset($_SESSION['user_id'])) {
+        echo "User ID: " . $_SESSION['user_id'] . "<br>";
+        echo "User email: " . ($_SESSION['user_email'] ?? 'N/A') . "<br>";
+    } else {
+        echo "<strong style='color:red'>❌ NOT LOGGED IN!</strong><br>";
+        echo "<br><a href='/login.php'>Go to login</a><br>";
+        die();
+    }
+    
+    echo "4. Calling requireAuth()...<br>";
     $auth->requireAuth();
     echo "✅ Auth OK<br>";
     
-    echo "4. Loading FeedSource model...<br>";
+    echo "5. Loading FeedSource model...<br>";
     
 } catch (\Throwable $e) {
     echo "<h2 style='color:red'>ERROR at step above:</h2>";
@@ -48,6 +60,7 @@ try {
     }
     
     echo "<br><h3>✅ ALL TESTS PASSED!</h3>";
+    echo "<br><a href='/app/feed-sources/create.php'>Try real create page</a>";
     
 } catch (\Throwable $e) {
     echo "<h2 style='color:red'>ERROR in model creation:</h2>";
