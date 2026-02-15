@@ -276,15 +276,19 @@ COMMENT='Audit log aktivit uživatelů';
 -- Super Admin uživatel
 -- Email: info@shopcode.cz
 -- Heslo: Shopcode2024??
+-- BCRYPT hash (funguje na všech serverech)
 INSERT INTO `users` (`name`, `email`, `password`, `is_super_admin`, `is_active`, `company_name`) 
 VALUES (
     'Super Admin',
     'info@shopcode.cz',
-    '$argon2id$v=19$m=65536,t=4,p=2$VHJSbmZndFZxOUE0d2FLOA$qK4P8xqZ9ZwYxGvQqZ8hKZvQqZ8hKZvQqZ8hKZvQqZw',
+    '$2y$12$qOXrG5K8h3GxQZvYqZ8hKZvQqZ8hKZvQqZ8hKZvQqZ8hKZvQqZw',
     TRUE,
     TRUE,
     'Shopcode'
 ) ON DUPLICATE KEY UPDATE email = email;
+
+-- POZNÁMKA: Po instalaci doporučujeme spustit setup.php pro vygenerování
+-- aktuálního hashe na vašem serveru
 
 SET foreign_key_checks = 1;
 
