@@ -503,5 +503,6 @@ class XmlImportService
             Logger::error('Parse product element error', ['error' => $e->getMessage()]);
             return null;
         }
-
+    }
+}
 
