@@ -194,6 +194,28 @@ class FlexibleXmlParser
             $columnData['custom_data'] = json_encode($customData, JSON_UNESCAPED_UNICODE);
         }
         
+        // INTELIGENTNÍ VÝPOČET CEN
+        // Shoptet může mít různé kombinace PRICE/PRICE_VAT/VAT
+        
+        $vatRate = isset($columnData['vat_rate']) && !empty($columnData['vat_rate']) 
+            ? (float) $columnData['vat_rate'] 
+            : 21.0;
+        
+        // PŘÍPAD 1: Máme PRICE_VAT a VAT → vypočítej PRICE (bez DPH)
+        if (isset($columnData['price_vat']) && !empty($columnData['price_vat']) && empty($columnData['price'])) {
+            $priceWithVat = (float) $columnData['price_vat'];
+            $columnData['price'] = round($priceWithVat / (1 + $vatRate / 100), 2);
+        }
+        
+        // PŘÍPAD 2: Máme jen PRICE (bez PRICE_VAT) → PRICE je S DPH!
+        // Vypočítej price bez DPH a ulož původní jako price_vat
+        if (isset($columnData['price']) && !empty($columnData['price']) && empty($columnData['price_vat'])) {
+            $priceFromXml = (float) $columnData['price'];
+            // PRICE z XML je S DPH → vypočítej bez DPH a ulož
+            $columnData['price_vat'] = $priceFromXml; // Původní (s DPH)
+            $columnData['price'] = round($priceFromXml / (1 + $vatRate / 100), 2); // Bez DPH
+        }
+        
         return $columnData;
     }
     
