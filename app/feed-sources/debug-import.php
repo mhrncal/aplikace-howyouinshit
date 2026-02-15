@@ -4,19 +4,19 @@ ini_set('display_errors', 1);
 
 echo "<h1>Import Debug</h1>";
 
+require_once __DIR__ . '/../../bootstrap.php';
+
+use App\Modules\FeedSources\Models\FeedSource;
+use App\Modules\Products\Services\XmlImportService;
+
 try {
-    echo "1. Loading bootstrap...<br>";
-    require_once __DIR__ . '/../../bootstrap.php';
-    echo "✅ Bootstrap OK<br>";
+    echo "1. Bootstrap loaded<br>";
     
     echo "2. Auth check...<br>";
     $auth->requireAuth();
     echo "✅ Auth OK, User ID: " . $auth->userId() . "<br>";
     
-    echo "3. Loading models...<br>";
-    use App\Modules\FeedSources\Models\FeedSource;
-    use App\Modules\Products\Services\XmlImportService;
-    
+    echo "3. Models loaded<br>";
     $feedSourceModel = new FeedSource();
     echo "✅ FeedSource model loaded<br>";
     
