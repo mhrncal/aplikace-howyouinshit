@@ -209,25 +209,46 @@ class Product
      */
     public function batchUpsert(array $products): array
     {
-        $created = 0;
+        $inserted = 0;
         $updated = 0;
         $failed = 0;
+
+        if (empty($products)) {
+            return [
+                'inserted' => 0,
+                'updated' => 0,
+                'failed' => 0
+            ];
+        }
 
         $this->db->beginTransaction();
 
         try {
             foreach ($products as $productData) {
-                $existing = $this->db->fetchOne(
-                    "SELECT id FROM products WHERE user_id = ? AND guid = ?",
-                    [$productData['user_id'], $productData['guid']]
-                );
+                // Sanitizuj data - odstraň variants před uložením
+                $variants = $productData['variants'] ?? [];
+                unset($productData['variants']);
+                
+                // Najdi existující produkt podle code
+                $existing = null;
+                if (!empty($productData['code'])) {
+                    $existing = $this->db->fetchOne(
+                        "SELECT id FROM products WHERE user_id = ? AND code = ? LIMIT 1",
+                        [$productData['user_id'], $productData['code']]
+                    );
+                }
 
                 if ($existing) {
+                    // Update existujícího
+                    $productData['updated_at'] = date('Y-m-d H:i:s');
                     $this->db->update('products', $productData, 'id = ?', [$existing['id']]);
                     $updated++;
                 } else {
+                    // Insert nového
+                    $productData['created_at'] = date('Y-m-d H:i:s');
+                    $productData['updated_at'] = date('Y-m-d H:i:s');
                     $this->db->insert('products', $productData);
-                    $created++;
+                    $inserted++;
                 }
             }
 
@@ -236,10 +257,15 @@ class Product
         } catch (\Exception $e) {
             $this->db->rollback();
             $failed = count($products);
+            
+            \App\Core\Logger::error('Batch upsert failed', [
+                'error' => $e->getMessage(),
+                'products_count' => count($products)
+            ]);
         }
 
         return [
-            'created' => $created,
+            'inserted' => $inserted,
             'updated' => $updated,
             'failed' => $failed
         ];
