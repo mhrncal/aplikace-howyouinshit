@@ -511,13 +511,22 @@ class XmlImportService
     
     /**
      * Parsuje jednotlivý SHOPITEM element (SHOPTET FORMÁT)
-     * POUŽÍVÁ KONFIGUROVATELNÝ FIELD MAPPING!
+     * POUŽÍVÁ DB MAPPINGY POKUD EXISTUJÍ, JINAK FALLBACK NA CONFIG!
      */
     private function parseProductElement(\SimpleXMLElement $item, int $userId): ?array
     {
         try {
-            // Načti mapping konfiguraci
-            $mapping = \App\Modules\Products\Config\XmlFieldMapping::getProductMapping();
+            // Načti mapping z DB (cache by se hodila)
+            $mappingModel = new \App\Modules\Products\Models\FieldMapping();
+            $dbMappings = $mappingModel->getAllForUser($userId, null, 'product');
+            
+            // Pokud existují DB mappingy, použij je
+            if (!empty($dbMappings)) {
+                $mapping = $mappingModel->toConfigFormat($dbMappings);
+            } else {
+                // Fallback na statickou konfiguraci
+                $mapping = \App\Modules\Products\Config\XmlFieldMapping::getProductMapping();
+            }
             
             $product = ['user_id' => $userId];
             
@@ -536,7 +545,14 @@ class XmlImportService
             $variants = [];
             
             if (isset($item->VARIANTS->VARIANT)) {
-                $variantMapping = \App\Modules\Products\Config\XmlFieldMapping::getVariantMapping();
+                // Načti variant mapping z DB
+                $dbVariantMappings = $mappingModel->getAllForUser($userId, null, 'variant');
+                
+                if (!empty($dbVariantMappings)) {
+                    $variantMapping = $mappingModel->toConfigFormat($dbVariantMappings);
+                } else {
+                    $variantMapping = \App\Modules\Products\Config\XmlFieldMapping::getVariantMapping();
+                }
                 
                 foreach ($item->VARIANTS->VARIANT as $variant) {
                     $variantData = [];
@@ -563,7 +579,8 @@ class XmlImportService
             Logger::info('Product parsed', [
                 'name' => substr($product['name'], 0, 50),
                 'code' => $product['code'],
-                'variants_count' => count($variants)
+                'variants_count' => count($variants),
+                'used_db_mappings' => !empty($dbMappings)
             ]);
             
             return $product;
