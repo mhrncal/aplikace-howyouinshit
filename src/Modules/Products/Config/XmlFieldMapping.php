@@ -183,13 +183,19 @@ class XmlFieldMapping
                 'default' => '',
             ],
             
-            'price' => [
+            'standard_price' => [
                 'xml_path' => 'PRICE_VAT',
                 'transform' => 'floatval',
                 'default' => 0,
             ],
             
-            'availability' => [
+            'stock' => [
+                'xml_path' => 'STOCK/AMOUNT',
+                'transform' => 'intval',
+                'default' => 0,
+            ],
+            
+            'availability_status' => [
                 'xml_path' => 'STOCK/AMOUNT',
                 'transform' => function($value) {
                     return (int)$value > 0 ? 'Skladem' : 'Není skladem';
@@ -199,9 +205,9 @@ class XmlFieldMapping
             
             // === PŘÍKLADY DALŠÍCH POLÍ PRO VARIANTY ===
             /*
-            'stock_amount' => [
-                'xml_path' => 'STOCK/AMOUNT',
-                'transform' => 'intval',
+            'purchase_price' => [
+                'xml_path' => 'PRICE_PURCHASE',
+                'transform' => 'floatval',
                 'default' => 0,
             ],
             

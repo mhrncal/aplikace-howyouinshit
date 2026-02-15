@@ -292,10 +292,45 @@ class Product
                         $variant['product_id'] = $productId;
                         $variant['created_at'] = date('Y-m-d H:i:s');
                         
-                        // Odstraň price_vat - product_variants má jen price
-                        unset($variant['price_vat']);
+                        // Zajisti povinná pole
+                        if (empty($variant['name'])) {
+                            $variant['name'] = 'Varianta';
+                        }
                         
-                        $this->db->insert('product_variants', $variant);
+                        // Vytvoř parameters JSON pokud neexistuje
+                        if (empty($variant['parameters'])) {
+                            $params = [];
+                            // Zkus vytvořit parameters z názvu varianty
+                            if (!empty($variant['name']) && $variant['name'] !== 'Varianta') {
+                                $params['name'] = $variant['name'];
+                            }
+                            if (!empty($variant['code'])) {
+                                $params['code'] = $variant['code'];
+                            }
+                            $variant['parameters'] = json_encode($params, JSON_UNESCAPED_UNICODE);
+                        } elseif (is_array($variant['parameters'])) {
+                            // Pokud je array, převeď na JSON
+                            $variant['parameters'] = json_encode($variant['parameters'], JSON_UNESCAPED_UNICODE);
+                        }
+                        
+                        // Odstraň nepoužívaná pole
+                        unset($variant['price_vat']);
+                        unset($variant['availability']); // product_variants nemá 'availability', jen 'availability_status'
+                        
+                        // Mapování polí - pokud existuje 'price', přejmenuj na 'standard_price'
+                        if (isset($variant['price']) && !isset($variant['standard_price'])) {
+                            $variant['standard_price'] = $variant['price'];
+                            unset($variant['price']);
+                        }
+                        
+                        try {
+                            $this->db->insert('product_variants', $variant);
+                        } catch (\Exception $e) {
+                            \App\Core\Logger::error('Failed to insert variant', [
+                                'variant' => $variant,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
                     }
                 }
             }
