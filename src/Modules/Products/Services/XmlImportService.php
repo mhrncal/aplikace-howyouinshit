@@ -364,9 +364,23 @@ class XmlImportService
         
         Logger::info('XML stream opened', ['url' => $url]);
         
+        $totalElements = 0;
+        
         // Najdi SHOPITEM elementy
         while (@$reader->read()) {
-            // Kontrola paměti každých 100 elementů
+            // Počítej všechny elementy
+            if ($reader->nodeType == \XMLReader::ELEMENT) {
+                $totalElements++;
+                
+                if ($totalElements % 500 === 0) {
+                    Logger::info('XML parsing progress', [
+                        'total_elements' => $totalElements,
+                        'products_processed' => $processed
+                    ]);
+                }
+            }
+            
+            // Kontrola paměti každých 100 produktů (ne elementů)
             if ($processed % 100 === 0) {
                 $memUsage = round(memory_get_usage() / 1024 / 1024, 2);
                 Logger::info('Import progress', [
@@ -461,46 +475,98 @@ class XmlImportService
     }
     
     /**
-     * Parsuje jednotlivý SHOPITEM element
+     * Parsuje jednotlivý SHOPITEM element (SHOPTET FORMÁT)
      */
     private function parseProductElement(\SimpleXMLElement $item, int $userId): ?array
     {
         try {
+            // SHOPTET používá NAME místo PRODUCT
+            $name = (string) ($item->NAME ?? $item->PRODUCT ?? '');
+            
+            if (empty($name)) {
+                Logger::warning('Product without name', ['item_id' => (string) $item['id']]);
+                return null;
+            }
+            
             $product = [
                 'user_id' => $userId,
-                'name' => (string) $item->PRODUCT,
+                'name' => $name,
                 'code' => (string) ($item->CODE ?? ''),
-                'ean' => (string) ($item->EAN ?? ''),
+                'ean' => '',
                 'manufacturer' => (string) ($item->MANUFACTURER ?? ''),
-                'category' => (string) ($item->CATEGORYTEXT ?? ''),
-                'description' => (string) ($item->DESCRIPTION ?? ''),
+                'category' => '',
+                'description' => strip_tags((string) ($item->DESCRIPTION ?? $item->SHORT_DESCRIPTION ?? '')),
                 'price' => (float) ($item->PRICE_VAT ?? 0),
                 'price_vat' => (float) ($item->PRICE_VAT ?? 0),
-                'url' => (string) ($item->URL ?? ''),
-                'image_url' => (string) ($item->IMGURL ?? ''),
-                'availability' => (string) ($item->DELIVERY_DATE ?? 'Skladem'),
+                'url' => (string) ($item->ORIG_URL ?? $item->URL ?? ''),
+                'image_url' => '',
+                'availability' => 'Skladem',
             ];
             
-            // Varianty
+            // Kategorie - Shoptet má CATEGORIES/CATEGORY
+            if (isset($item->CATEGORIES->DEFAULT_CATEGORY)) {
+                $product['category'] = (string) $item->CATEGORIES->DEFAULT_CATEGORY;
+            } elseif (isset($item->CATEGORIES->CATEGORY)) {
+                $product['category'] = (string) $item->CATEGORIES->CATEGORY[0];
+            } elseif (isset($item->CATEGORYTEXT)) {
+                $product['category'] = (string) $item->CATEGORYTEXT;
+            }
+            
+            // Obrázky - Shoptet má IMAGES/IMAGE
+            if (isset($item->IMAGES->IMAGE)) {
+                $product['image_url'] = (string) $item->IMAGES->IMAGE[0];
+            } elseif (isset($item->IMGURL)) {
+                $product['image_url'] = (string) $item->IMGURL;
+            }
+            
+            // Varianty - Shoptet má VARIANTS/VARIANT
             $variants = [];
-            if (isset($item->VARIANTS)) {
+            
+            if (isset($item->VARIANTS->VARIANT)) {
+                // Produkt s variantami
                 foreach ($item->VARIANTS->VARIANT as $variant) {
+                    $variantName = '';
+                    
+                    // Název varianty z parametrů
+                    if (isset($variant->PARAMETERS->PARAMETER)) {
+                        $params = [];
+                        foreach ($variant->PARAMETERS->PARAMETER as $param) {
+                            $params[] = (string) $param->VALUE;
+                        }
+                        $variantName = implode(', ', $params);
+                    }
+                    
                     $variants[] = [
-                        'name' => (string) ($variant->VARIANT_NAME ?? ''),
+                        'name' => $variantName ?: 'Varianta',
                         'code' => (string) ($variant->CODE ?? ''),
-                        'ean' => (string) ($variant->EAN ?? ''),
+                        'ean' => '',
                         'price' => (float) ($variant->PRICE_VAT ?? 0),
-                        'availability' => (string) ($variant->DELIVERY_DATE ?? 'Skladem'),
+                        'availability' => (int) ($variant->STOCK->AMOUNT ?? 0) > 0 ? 'Skladem' : 'Není skladem',
                     ];
+                }
+            } else {
+                // Produkt BEZ variant - má STOCK a PRICE_VAT přímo
+                if (isset($item->STOCK->AMOUNT)) {
+                    $amount = (int) $item->STOCK->AMOUNT;
+                    $product['availability'] = $amount > 0 ? 'Skladem' : 'Není skladem';
                 }
             }
             
             $product['variants'] = $variants;
             
+            Logger::info('Product parsed', [
+                'name' => substr($product['name'], 0, 50),
+                'code' => $product['code'],
+                'variants_count' => count($variants)
+            ]);
+            
             return $product;
             
         } catch (\Exception $e) {
-            Logger::error('Parse product element error', ['error' => $e->getMessage()]);
+            Logger::error('Parse product element error', [
+                'error' => $e->getMessage(),
+                'item_id' => (string) ($item['id'] ?? 'unknown')
+            ]);
             return null;
         }
     }

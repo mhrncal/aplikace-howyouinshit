@@ -97,10 +97,14 @@ ob_start();
                     <div class="mb-3">
                         <label class="form-label">Typ feedu</label>
                         <select class="form-select" name="feed_type">
-                            <option value="xml" <?= old('feed_type', 'xml') === 'xml' ? 'selected' : '' ?>>XML</option>
+                            <option value="shoptet" <?= old('feed_type', 'shoptet') === 'shoptet' ? 'selected' : '' ?>>Marketingový Shoptet feed</option>
+                            <option value="xml" <?= old('feed_type') === 'xml' ? 'selected' : '' ?>>Obecný XML</option>
                             <option value="json" <?= old('feed_type') === 'json' ? 'selected' : '' ?>>JSON</option>
                             <option value="csv" <?= old('feed_type') === 'csv' ? 'selected' : '' ?>>CSV</option>
                         </select>
+                        <div class="form-text">
+                            Shoptet feed: Automaticky parsuje SHOPITEM elementy s variantami
+                        </div>
                     </div>
                     
                     <div class="form-check mb-4">
