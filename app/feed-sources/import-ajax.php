@@ -24,14 +24,15 @@ if (!$feed) {
     exit;
 }
 
+// KRITICKÉ: Zavři session PŘED dlouhým importem
+// Jinak se zamkne pro ostatní requesty
+session_write_close();
+
 // Nastavení pro dlouhý běh
 set_time_limit(0); // Neomezený čas
 ignore_user_abort(true); // Pokračuj i když uživatel zavře okno
 ini_set('memory_limit', '512M');
-
-// Zapni output buffering pro progress
-ob_implicit_flush(true);
-ob_end_flush();
+ini_set('max_execution_time', '0');
 
 try {
     $xmlImporter = new XmlImportService();
