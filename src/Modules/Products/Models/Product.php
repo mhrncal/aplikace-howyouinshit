@@ -271,6 +271,10 @@ class Product
                     foreach ($variants as $variant) {
                         $variant['product_id'] = $productId;
                         $variant['created_at'] = date('Y-m-d H:i:s');
+                        
+                        // Odstraň price_vat - product_variants má jen price
+                        unset($variant['price_vat']);
+                        
                         $this->db->insert('product_variants', $variant);
                     }
                 }

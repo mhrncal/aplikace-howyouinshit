@@ -76,6 +76,17 @@ class FlexibleXmlParser
             
             $prepared['variants'] = $variants;
             
+            // SHOPTET: Pokud produkt nemá cenu, ale varianty mají, vezmi z první
+            if (empty($prepared['price']) && empty($prepared['price_vat']) && !empty($variants[0])) {
+                $firstVariant = $variants[0];
+                if (isset($firstVariant['price'])) {
+                    $prepared['price'] = $firstVariant['price'];
+                }
+                if (isset($firstVariant['price_vat'])) {
+                    $prepared['price_vat'] = $firstVariant['price_vat'];
+                }
+            }
+            
             Logger::info('Product parsed (flexible)', [
                 'name' => substr($prepared['name'], 0, 50),
                 'code' => $prepared['code'] ?? 'N/A',

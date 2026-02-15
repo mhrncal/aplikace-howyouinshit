@@ -66,7 +66,7 @@
                 </div>
                 <?php endif; ?>
                 
-                <?php if (!empty($product['description'])): ?>
+                <?php if (false): ?> <!-- Popis skrytý -->
                 <div class="row">
                     <div class="col-md-4">
                         <strong>Popis:</strong>
@@ -100,30 +100,30 @@
                         <tbody>
                             <?php foreach ($variants as $variant): ?>
                             <tr>
-                                <td><?= e($variant['variant_name']) ?></td>
+                                <td><?= e($variant['name'] ?? '-') ?></td>
                                 <td>
-                                    <?php if ($variant['variant_code']): ?>
-                                        <code><?= e($variant['variant_code']) ?></code>
+                                    <?php if (!empty($variant['code'])): ?>
+                                        <code><?= e($variant['code']) ?></code>
                                     <?php else: ?>
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($variant['variant_ean']): ?>
-                                        <code><?= e($variant['variant_ean']) ?></code>
+                                    <?php if (!empty($variant['ean'])): ?>
+                                        <code><?= e($variant['ean']) ?></code>
                                     <?php else: ?>
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($variant['price']): ?>
+                                    <?php if (!empty($variant['price'])): ?>
                                         <strong><?= formatPrice($variant['price']) ?></strong>
                                     <?php else: ?>
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <?php if ($variant['availability']): ?>
+                                    <?php if (!empty($variant['availability'])): ?>
                                         <span class="badge bg-success"><?= e($variant['availability']) ?></span>
                                     <?php else: ?>
                                         <span class="badge bg-secondary">Nezadáno</span>
