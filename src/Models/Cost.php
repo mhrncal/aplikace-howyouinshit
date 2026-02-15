@@ -169,8 +169,22 @@ class Cost
         ];
         
         foreach ($costs as $cost) {
-            // Přepočet na měsíční částku podle frekvence S PŘESNÝMI DNY
-            $monthlyAmount = $this->convertToMonthly($cost['amount'], $cost['frequency'], $year, $month);
+            // Pro jednorázové náklady: započítat pouze v měsíci start_date
+            if ($cost['frequency'] === 'once') {
+                $costStartMonth = (int) date('n', strtotime($cost['start_date']));
+                $costStartYear = (int) date('Y', strtotime($cost['start_date']));
+                
+                // Pokud start_date není v tomto měsíci, přeskoč
+                if ($costStartMonth !== $month || $costStartYear !== $year) {
+                    continue;
+                }
+                
+                // Započítat celou částku
+                $monthlyAmount = $cost['amount'];
+            } else {
+                // Přepočet na měsíční částku podle frekvence S PŘESNÝMI DNY
+                $monthlyAmount = $this->convertToMonthly($cost['amount'], $cost['frequency'], $year, $month);
+            }
             
             // Typ
             $breakdown[$cost['type']] += $monthlyAmount;
