@@ -26,13 +26,28 @@ ob_start();
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Kvartální analýza - Q<?= $quarter ?> / <?= $year ?></h2>
-    <div class="btn-group">
-        <a href="?year=<?= $year ?>&quarter=<?= $quarter > 1 ? $quarter - 1 : 1 ?>" class="btn btn-outline-secondary">
-            <i class="bi bi-arrow-left"></i> Předchozí
-        </a>
-        <a href="?year=<?= date('Y') ?>&quarter=<?= ceil(date('n') / 3) ?>" class="btn btn-primary">Aktuální</a>
-        <a href="?year=<?= $year ?>&quarter=<?= $quarter < 4 ? $quarter + 1 : 4 ?>" class="btn btn-outline-secondary">
-            Další <i class="bi bi-arrow-right"></i>
+    <div class="d-flex gap-2">
+        <!-- Výběr roku -->
+        <div class="btn-group">
+            <a href="?year=<?= $year - 1 ?>&quarter=<?= $quarter ?>" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> <?= $year - 1 ?>
+            </a>
+            <button class="btn btn-primary disabled"><?= $year ?></button>
+            <a href="?year=<?= $year + 1 ?>&quarter=<?= $quarter ?>" class="btn btn-outline-secondary">
+                <?= $year + 1 ?> <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+        
+        <!-- Výběr kvartálu -->
+        <div class="btn-group">
+            <a href="?year=<?= $year ?>&quarter=1" class="btn btn-<?= $quarter === 1 ? 'primary' : 'outline-secondary' ?>">Q1</a>
+            <a href="?year=<?= $year ?>&quarter=2" class="btn btn-<?= $quarter === 2 ? 'primary' : 'outline-secondary' ?>">Q2</a>
+            <a href="?year=<?= $year ?>&quarter=3" class="btn btn-<?= $quarter === 3 ? 'primary' : 'outline-secondary' ?>">Q3</a>
+            <a href="?year=<?= $year ?>&quarter=4" class="btn btn-<?= $quarter === 4 ? 'primary' : 'outline-secondary' ?>">Q4</a>
+        </div>
+        
+        <a href="?year=<?= date('Y') ?>&quarter=<?= ceil(date('n') / 3) ?>" class="btn btn-success">
+            <i class="bi bi-calendar-check me-1"></i>Aktuální kvartál
         </a>
     </div>
 </div>

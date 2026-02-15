@@ -387,17 +387,81 @@ class CostsPdfExporter
      */
     private function outputPDF(string $html, string $filename): void
     {
-        // Nastavení hlaviček pro PDF
-        header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $filename . '"');
-        header('Cache-Control: private, max-age=0, must-revalidate');
-        header('Pragma: public');
-        
-        // Použití wkhtmltopdf nebo DomPDF jako fallback
-        // Pro jednoduchost použijeme HTML výstup který prohlížeč může vytisknout jako PDF
-        echo '<html><head><meta charset="UTF-8"></head><body>';
-        echo $html;
-        echo '<script>window.print();</script>';
-        echo '</body></html>';
+        // Print-friendly stránka s automatickým tiskem
+        ?>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title><?= htmlspecialchars($filename) ?></title>
+    <style>
+        @media print {
+            @page { margin: 2cm; }
+            body { margin: 0; }
+        }
+        @media screen {
+            body { 
+                max-width: 21cm; 
+                margin: 20px auto; 
+                padding: 20px;
+                background: #f5f5f5;
+            }
+            .print-container {
+                background: white;
+                padding: 2cm;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+            .no-print {
+                text-align: center;
+                padding: 20px;
+                background: #3b82f6;
+                color: white;
+                margin-bottom: 20px;
+                border-radius: 8px;
+            }
+            .no-print button {
+                background: white;
+                color: #3b82f6;
+                border: none;
+                padding: 10px 20px;
+                margin: 0 5px;
+                border-radius: 4px;
+                cursor: pointer;
+                font-weight: bold;
+            }
+            .no-print button:hover {
+                background: #dbeafe;
+            }
+        }
+        @media print {
+            .no-print { display: none; }
+            .print-container { box-shadow: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print">
+        <h3>Připraveno k tisku / exportu do PDF</h3>
+        <p>Klikněte na tlačítko níže pro vytvoření PDF</p>
+        <button onclick="window.print()">🖨️ Tisknout / Uložit jako PDF</button>
+        <button onclick="window.close()">✖️ Zavřít</button>
+    </div>
+    <div class="print-container">
+        <?= $html ?>
+    </div>
+    <script>
+        // Automaticky otevřít print dialog po 500ms
+        setTimeout(function() {
+            // Zkontrolovat jestli uživatel chce automatický tisk
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('autoprint') !== 'no') {
+                window.print();
+            }
+        }, 500);
+    </script>
+</body>
+</html>
+        <?php
+        exit;
     }
 }
