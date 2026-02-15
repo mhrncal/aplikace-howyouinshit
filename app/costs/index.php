@@ -56,7 +56,7 @@ if (isPost()) {
 }
 
 // Data
-$data = $costModel->getAll($userId, $page, 20, $filters);
+$data = $costModel->getAll($userId, $page, 25, $filters);
 $costs = $data['costs'];
 $pagination = $data['pagination'];
 
