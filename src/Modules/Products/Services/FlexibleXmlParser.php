@@ -113,6 +113,11 @@ class FlexibleXmlParser
     {
         $data = [];
         
+        // ATRIBUTY SHOPITEM (např. id="20929")
+        foreach ($xml->attributes() as $attrName => $attrValue) {
+            $data['@' . $attrName] = (string) $attrValue;
+        }
+        
         // Jednoduché elementy
         foreach ($xml->children() as $name => $value) {
             $data[$name] = (string) $value;
@@ -133,6 +138,11 @@ class FlexibleXmlParser
         
         if (isset($xml->LOGISTIC->WEIGHT)) {
             $data['WEIGHT'] = (float) $xml->LOGISTIC->WEIGHT;
+        }
+        
+        // ORIG_URL (kompletní URL produktu)
+        if (isset($xml->ORIG_URL)) {
+            $data['URL'] = (string) $xml->ORIG_URL;
         }
         
         return $data;
