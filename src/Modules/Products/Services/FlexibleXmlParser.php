@@ -256,7 +256,7 @@ class FlexibleXmlParser
         } else {
             return [
                 ['db_column' => 'code', 'xml_path' => 'CODE', 'data_type' => 'string', 'target_type' => 'column', 'is_active' => 1],
-                ['db_column' => 'price', 'xml_path' => 'PRICE_VAT', 'data_type' => 'float', 'target_type' => 'column', 'is_active' => 1],
+                ['db_column' => 'price', 'xml_path' => 'PRICE', 'data_type' => 'float', 'target_type' => 'column', 'is_active' => 1],
             ];
         }
     }

@@ -204,7 +204,7 @@ try {
                 [$saved['id']]
             );
             
-            echo "<br><strong>Uložené varianty ({count($variants)}):</strong><pre>";
+            echo "<br><strong>Uložené varianty (" . count($variants) . "):</strong><pre>";
             print_r($variants);
             echo "</pre>";
         }
