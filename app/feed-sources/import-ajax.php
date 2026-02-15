@@ -18,6 +18,7 @@ try {
 use App\Modules\FeedSources\Models\FeedSource;
 use App\Modules\Products\Services\XmlImportService;
 use App\Core\Logger;
+use App\Core\LogManager;
 
 $feedSourceModel = new FeedSource();
 $userId = $auth->userId();
@@ -38,6 +39,10 @@ if (!$feed) {
 }
 
 Logger::info('Feed loaded', ['feed' => $feed['name']]);
+
+// VYČISTIT logy před importem
+LogManager::clearImportLogs($userId, $feedId);
+Logger::info('Import logs cleared', ['user_id' => $userId, 'feed_id' => $feedId]);
 
 // KRITICKÉ: Zavři session PŘED dlouhým importem
 session_write_close();

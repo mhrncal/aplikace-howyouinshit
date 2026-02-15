@@ -52,13 +52,13 @@ class XmlImportService
             // Update log
             $this->completeImportLog($logId, [
                 'status' => 'completed',
-                'total_records' => count($products),
-                'processed_records' => count($products),
-                'created_records' => $result['created'],
+                'total_records' => $result['imported'] + $result['updated'],
+                'processed_records' => $result['imported'] + $result['updated'],
+                'created_records' => $result['imported'],
                 'updated_records' => $result['updated'],
-                'failed_records' => $result['failed'],
+                'failed_records' => $result['errors'],
                 'duration_seconds' => $duration,
-                'file_size' => $fileSize,
+                'file_size' => 0, // Neznáme při streamování
                 'memory_peak_mb' => $memoryPeak
             ]);
             
