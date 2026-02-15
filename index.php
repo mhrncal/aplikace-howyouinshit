@@ -8,7 +8,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 // Pokud je přihlášen, jdi na dashboard
 if ($auth->check()) {
-    redirect('/app/dashboard/index.php');
+    redirect('/app/dashboard/');
 }
 
 // Jinak na přihlášení

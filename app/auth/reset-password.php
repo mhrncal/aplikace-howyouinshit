@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../../bootstrap.php';
 
 if ($auth->check()) {
-    redirect('/app/dashboard/index.php');
+    redirect('/app/dashboard/');
 }
 
 $token = get('token');

@@ -79,7 +79,7 @@ class ProductController extends Module
         
         if (!$this->validatePost()) {
             flash('error', 'Neplatný požadavek');
-            redirect('/products.php');
+            redirect('/app/products/');
         }
         
         $id = (int) post('product_id');
@@ -91,7 +91,7 @@ class ProductController extends Module
             flash('error', 'Nepodařilo se smazat produkt');
         }
         
-        redirect('/products.php');
+        redirect('/app/products/');
     }
 
     /**
