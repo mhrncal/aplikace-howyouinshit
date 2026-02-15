@@ -66,14 +66,30 @@ if ($user) {
 // Test 3: Kontrola hashe
 echo "<h2>3️⃣ Test hesla</h2>";
 
-// Vygeneruj nový hash pro srovnání
-$newHash = Security::hashPassword($password);
-
+// Test podpory Argon2ID
 echo "<div class='box'>";
-echo "<strong>Test heslo:</strong> <code>{$password}</code><br><br>";
-echo "<strong>Nově vygenerovaný hash (pro srovnání):</strong><br>";
-echo "<pre style='word-break:break-all;'>{$newHash}</pre>";
+echo "<strong>Server info:</strong><br>";
+echo "PHP verze: <code>" . PHP_VERSION . "</code><br>";
+echo "PASSWORD_ARGON2ID: <code>" . (defined('PASSWORD_ARGON2ID') ? 'Podporováno ✅' : 'NENÍ podporováno ❌') . "</code><br>";
+echo "PASSWORD_BCRYPT: <code>Podporováno ✅</code>";
 echo "</div>";
+
+// Vygeneruj nový hash pro srovnání
+try {
+    $newHash = Security::hashPassword($password);
+    
+    echo "<div class='box'>";
+    echo "<strong>Test heslo:</strong> <code>{$password}</code><br><br>";
+    echo "<strong>Nově vygenerovaný hash (pro srovnání):</strong><br>";
+    echo "<pre style='word-break:break-all;'>{$newHash}</pre>";
+    echo "</div>";
+} catch (\Exception $e) {
+    echo "<div class='box error'>";
+    echo "❌ <strong>CHYBA při generování hashe:</strong><br>";
+    echo htmlspecialchars($e->getMessage());
+    echo "</div>";
+    $newHash = null;
+}
 
 // Test password_verify s aktuálním hashem v DB
 $verifyResult = password_verify($password, $user['password']);
@@ -97,7 +113,7 @@ if ($verifyResult) {
 }
 
 // Oprava hashe
-if (isset($_GET['fix_hash']) && $user) {
+if (isset($_GET['fix_hash']) && $user && $newHash) {
     echo "<h2>4️⃣ Oprava hashe</h2>";
     
     $db->update('users', [
@@ -123,6 +139,10 @@ if (isset($_GET['fix_hash']) && $user) {
     echo "<strong>Kontrola po opravě:</strong><br>";
     echo "password_verify(): " . ($verifyAfter ? "<span style='color:green;'>✅ FUNGUJE</span>" : "<span style='color:red;'>❌ NEFUNGUJE</span>") . "<br>";
     echo "is_active: " . ($userAfter['is_active'] ? "<span style='color:green;'>✅ ANO</span>" : "<span style='color:red;'>❌ NE</span>");
+    echo "</div>";
+} elseif (isset($_GET['fix_hash']) && !$newHash) {
+    echo "<div class='box error'>";
+    echo "❌ Nelze opravit hash - generování hashe selhalo. Kontaktujte administrátora serveru.";
     echo "</div>";
 }
 

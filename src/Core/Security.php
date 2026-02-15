@@ -89,14 +89,29 @@ class Security
     }
 
     /**
-     * Hash hesla
+     * Hash hesla - s fallback na BCRYPT pokud Argon2id není dostupný
      */
     public static function hashPassword(string $password): string
     {
-        return password_hash($password, PASSWORD_ARGON2ID, [
-            'memory_cost' => 65536,
-            'time_cost' => 4,
-            'threads' => 2
+        // Zkus Argon2id (bezpečnější)
+        if (defined('PASSWORD_ARGON2ID')) {
+            try {
+                $hash = password_hash($password, PASSWORD_ARGON2ID, [
+                    'memory_cost' => 65536,
+                    'time_cost' => 4,
+                    'threads' => 2
+                ]);
+                if ($hash !== false) {
+                    return $hash;
+                }
+            } catch (\Exception $e) {
+                // Fallback na BCRYPT
+            }
+        }
+        
+        // Fallback: BCRYPT (funguje všude)
+        return password_hash($password, PASSWORD_BCRYPT, [
+            'cost' => 12
         ]);
     }
 
