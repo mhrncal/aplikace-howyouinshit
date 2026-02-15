@@ -1,0 +1,59 @@
+# PHP
+*.log
+*.cache
+*.tmp
+*.bak
+*.swp
+*~
+
+# Composer
+/vendor/
+composer.lock
+composer.phar
+
+# Storage & Logs
+/storage/logs/*.log
+/storage/cache/*
+/storage/sessions/*
+!/storage/logs/.gitkeep
+!/storage/cache/.gitkeep
+!/storage/sessions/.gitkeep
+
+# Configuration
+/config/database.php
+/config/local.php
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# Build & Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Temporary files
+*.tar.gz
+*.zip
+*.rar
+
+# Database dumps
+*.sql.gz
+*.sql.bak
+dump.sql
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini
