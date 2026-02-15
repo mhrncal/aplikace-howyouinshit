@@ -21,7 +21,7 @@ class XmlImportService
     }
 
     /**
-     * Importuje produkty z XML URL
+     * Importuje produkty z XML URL - STREAMOVÉ ZPRACOVÁNÍ
      */
     public function importFromUrl(int $feedSourceId, int $userId, string $url, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
     {
@@ -34,15 +34,8 @@ class XmlImportService
             $startTime = microtime(true);
             $startMemory = memory_get_usage();
             
-            // Download XML
-            $xmlContent = $this->downloadXml($url, $httpAuthUser, $httpAuthPass);
-            $fileSize = strlen($xmlContent);
-            
-            // Parse XML pomocí XMLReader (stream processing pro velké soubory)
-            $products = $this->parseXml($xmlContent, $userId);
-            
-            // Batch upsert
-            $result = $this->productModel->batchUpsert($products);
+            // STREAMOVÉ zpracování - nestahuje celý soubor do paměti
+            $result = $this->parseXmlStream($url, $userId, $httpAuthUser, $httpAuthPass);
             
             $duration = round(microtime(true) - $startTime);
             $memoryPeak = round((memory_get_peak_usage() - $startMemory) / 1024 / 1024, 2);
@@ -330,4 +323,135 @@ class XmlImportService
             );
         }
     }
-}
+    
+    /**
+     * STREAMOVÉ parsování XML - zpracovává po jednotlivých produktech
+     * Šetří paměť, ukládá průběžně do DB
+     */
+    private function parseXmlStream(string $url, int $userId, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
+    {
+        $imported = 0;
+        $updated = 0;
+        $errors = 0;
+        $batchSize = 50; // Ukládá po 50 produktech
+        $batch = [];
+        
+        // Nastavení context pro HTTP
+        $opts = [
+            'http' => [
+                'timeout' => 300,
+                'user_agent' => 'E-shop Analytics Bot/1.0',
+            ]
+        ];
+        
+        if ($httpAuthUser && $httpAuthPass) {
+            $opts['http']['header'] = "Authorization: Basic " . base64_encode("$httpAuthUser:$httpAuthPass");
+        }
+        
+        $context = stream_context_create($opts);
+        
+        // Otevři stream
+        $stream = @fopen($url, 'r', false, $context);
+        if (!$stream) {
+            throw new \Exception("Nelze otevřít URL: $url");
+        }
+        
+        // XMLReader pro streamování
+        $reader = new \XMLReader();
+        $reader->open($url, null, LIBXML_PARSEHUGE);
+        
+        // Najdi SHOPITEM elementy
+        while ($reader->read()) {
+            if ($reader->nodeType == \XMLReader::ELEMENT && $reader->name == 'SHOPITEM') {
+                // Načti celý SHOPITEM element
+                $xml = simplexml_load_string($reader->readOuterXml());
+                
+                if ($xml) {
+                    try {
+                        // Parsuj produkt
+                        $product = $this->parseProductElement($xml, $userId);
+                        
+                        if ($product) {
+                            $batch[] = $product;
+                            
+                            // Uložit batch když dosáhne velikosti
+                            if (count($batch) >= $batchSize) {
+                                $result = $this->productModel->batchUpsert($batch);
+                                $imported += $result['inserted'];
+                                $updated += $result['updated'];
+                                $batch = []; // Vyčisti batch
+                                
+                                // Uvolni paměť
+                                gc_collect_cycles();
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        $errors++;
+                        Logger::warning('Product parse error', ['error' => $e->getMessage()]);
+                    }
+                }
+            }
+        }
+        
+        // Uložit zbylé produkty
+        if (!empty($batch)) {
+            $result = $this->productModel->batchUpsert($batch);
+            $imported += $result['inserted'];
+            $updated += $result['updated'];
+        }
+        
+        $reader->close();
+        fclose($stream);
+        
+        return [
+            'imported' => $imported,
+            'updated' => $updated,
+            'errors' => $errors,
+        ];
+    }
+    
+    /**
+     * Parsuje jednotlivý SHOPITEM element
+     */
+    private function parseProductElement(\SimpleXMLElement $item, int $userId): ?array
+    {
+        try {
+            $product = [
+                'user_id' => $userId,
+                'name' => (string) $item->PRODUCT,
+                'code' => (string) ($item->CODE ?? ''),
+                'ean' => (string) ($item->EAN ?? ''),
+                'manufacturer' => (string) ($item->MANUFACTURER ?? ''),
+                'category' => (string) ($item->CATEGORYTEXT ?? ''),
+                'description' => (string) ($item->DESCRIPTION ?? ''),
+                'price' => (float) ($item->PRICE_VAT ?? 0),
+                'price_vat' => (float) ($item->PRICE_VAT ?? 0),
+                'url' => (string) ($item->URL ?? ''),
+                'image_url' => (string) ($item->IMGURL ?? ''),
+                'availability' => (string) ($item->DELIVERY_DATE ?? 'Skladem'),
+            ];
+            
+            // Varianty
+            $variants = [];
+            if (isset($item->VARIANTS)) {
+                foreach ($item->VARIANTS->VARIANT as $variant) {
+                    $variants[] = [
+                        'name' => (string) ($variant->VARIANT_NAME ?? ''),
+                        'code' => (string) ($variant->CODE ?? ''),
+                        'ean' => (string) ($variant->EAN ?? ''),
+                        'price' => (float) ($variant->PRICE_VAT ?? 0),
+                        'availability' => (string) ($variant->DELIVERY_DATE ?? 'Skladem'),
+                    ];
+                }
+            }
+            
+            $product['variants'] = $variants;
+            
+            return $product;
+            
+        } catch (\Exception $e) {
+            Logger::error('Parse product element error', ['error' => $e->getMessage()]);
+            return null;
+        }
+
+

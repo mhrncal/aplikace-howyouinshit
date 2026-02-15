@@ -32,13 +32,20 @@ if (isPost()) {
         redirect('/app/feed-sources/');
     }
     
-    set_time_limit(300); // 5 minut
+    set_time_limit(600); // 10 minut pro velké feedy
+    ini_set('memory_limit', '512M'); // Více paměti
     
     $importing = true;
     
     try {
-        $xmlImporter = new XmlImportService($userId);
-        $result = $xmlImporter->importFromUrl($feed['url'], $feedId);
+        $xmlImporter = new XmlImportService();
+        $result = $xmlImporter->importFromUrl(
+            $feedId,
+            $userId,
+            $feed['url'],
+            $feed['http_auth_username'] ?? null,
+            $feed['http_auth_password'] ?? null
+        );
         
         // Update last_import_at
         $feedSourceModel->update($feedId, $userId, [
