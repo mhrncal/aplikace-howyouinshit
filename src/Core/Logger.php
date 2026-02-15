@@ -78,13 +78,34 @@ class Logger
         $date = date('Y-m-d');
         $time = date('H:i:s');
         
-        // SPECIÁLNÍ: Import logy jdou přes LogManager do složek
-        if ($category === 'import' && isset($context['user_id']) && isset($context['feed_source_id'])) {
-            LogManager::log('import', "[$level] $message", $context, $context['user_id'], $context['feed_source_id']);
-            return;
+        // IMPORT KATEGORIE → SLOŽKY podle user_id a feed_source_id
+        if ($category === 'import') {
+            $userId = $context['user_id'] ?? null;
+            $feedId = $context['feed_source_id'] ?? null;
+            
+            if ($userId && $feedId) {
+                // storage/logs/imports/user_X/feed_Y/import_DATE.log
+                $logDir = self::$logPath . "/imports/user_{$userId}/feed_{$feedId}";
+                
+                if (!is_dir($logDir)) {
+                    mkdir($logDir, 0777, true);
+                }
+                
+                $logFile = $logDir . "/import_{$date}.log";
+                $contextString = !empty($context) ? ' ' . json_encode($context, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
+                $logMessage = "[{$time}] [{$level}] {$message}{$contextString}\n";
+                
+                file_put_contents($logFile, $logMessage, FILE_APPEND | LOCK_EX);
+                
+                // TAKÉ do app.log pro přehled
+                $appLog = self::$logPath . "/app-{$date}.log";
+                file_put_contents($appLog, $logMessage, FILE_APPEND | LOCK_EX);
+                
+                return;
+            }
         }
         
-        // LOG SOUBOR podle KATEGORIE: import-2026-02-15.log, auth-2026-02-15.log
+        // STANDARDNÍ LOG - {category}-{date}.log
         $logFile = self::$logPath . "/{$category}-{$date}.log";
         
         // ROTACE - pokud soubor > 10 MB, přejmenuj a začni nový
