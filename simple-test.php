@@ -50,8 +50,8 @@ try {
     echo "<p>Zkouším ARGON2ID...</p>";
     $argonHash = password_hash($password, PASSWORD_ARGON2ID, [
         'memory_cost' => 65536,
-        'time_cost' => 4,
-        'threads' => 2
+        'time_cost' => 4
+        // threads odstraněn - nefunguje na všech serverech
     ]);
     echo "✅ ARGON2ID hash: <code style='font-size:10px;'>{$argonHash}</code><br><br>";
     
