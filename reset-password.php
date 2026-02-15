@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../bootstrap.php';
+require_once __DIR__ . '/bootstrap.php';
 
 if ($auth->check()) {
     redirect('/dashboard.php');
@@ -129,4 +129,4 @@ ob_start();
 
 <?php
 $content = ob_get_clean();
-require __DIR__ . '/../views/layouts/main.php';
+require __DIR__ . '/views/layouts/main.php';

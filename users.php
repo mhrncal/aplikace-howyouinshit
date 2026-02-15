@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../bootstrap.php';
+require_once __DIR__ . '/bootstrap.php';
 
 $auth->requireSuperAdmin();
 
@@ -184,4 +184,4 @@ ob_start();
 <?php
 $content = ob_get_clean();
 clearErrors();
-require __DIR__ . '/../views/layouts/main.php';
+require __DIR__ . '/views/layouts/main.php';

@@ -44,40 +44,47 @@ Moderní, rychlá a bezpečná platforma pro analýzu e-shopů postavená na **P
 ```
 aplikace-howyouinshit/
 ├── bootstrap.php           # Inicializace aplikace
-├── config/                 # Konfigurace
+├── index.php               # Hlavní stránka
+├── login.php               # Přihlášení
+├── dashboard.php           # Dashboard
+├── users.php               # Správa uživatelů
+├── *.php                   # Další stránky modulů
+├── .htaccess              # Apache konfigurace
+├── config/                # Konfigurace
 │   ├── app.php
 │   └── database.php
-├── database/               # SQL schémata
+├── database/              # SQL schémata & migrace
 │   └── schema.sql
-├── public/                 # Veřejné soubory (web root)
-│   ├── index.php
-│   ├── login.php
-│   ├── logout.php
-│   ├── dashboard.php
-│   ├── users.php
-│   ├── forgot-password.php
-│   └── reset-password.php
-├── src/                    # Zdrojové kódy
-│   ├── Core/              # Jádro systému
+├── src/                   # Zdrojové kódy
+│   ├── Core/             # Jádro systému
 │   │   ├── Autoloader.php
 │   │   ├── Auth.php
 │   │   ├── Database.php
 │   │   ├── Logger.php
-│   │   └── Security.php
-│   ├── Models/            # Datové modely
+│   │   ├── Security.php
+│   │   └── Module.php    # Base třída pro moduly
+│   ├── Models/           # Datové modely
 │   │   └── User.php
-│   ├── Services/          # Business logika
-│   ├── Controllers/       # Controllery
-│   ├── Middleware/        # Middleware
-│   ├── Validators/        # Validátory
-│   └── helpers.php        # Helper funkce
-├── storage/               # Úložiště
-│   ├── logs/             # Aplikační logy
-│   ├── cache/            # Cache
-│   └── sessions/         # Session soubory
-└── views/                # View šablony
-    └── layouts/
-        └── main.php      # Hlavní layout
+│   ├── Modules/          # Aplikační moduly
+│   │   └── NazevModulu/
+│   │       ├── Controllers/
+│   │       ├── Models/
+│   │       ├── Services/
+│   │       └── Views/
+│   └── helpers.php       # Helper funkce
+├── storage/              # Úložiště
+│   ├── logs/            # Aplikační logy
+│   ├── cache/           # Cache
+│   └── sessions/        # Session soubory
+├── views/               # View šablony
+│   └── layouts/
+│       └── main.php     # Hlavní layout
+├── assets/              # Statické soubory
+│   ├── css/
+│   ├── js/
+│   └── images/
+├── README.md            # Tato dokumentace
+└── MODULES.md          # Průvodce tvorbou modulů
 
 ```
 
@@ -98,17 +105,24 @@ aplikace-howyouinshit/
 
 ### 2. Nahrání na server
 
-**Varianta A: FTP Upload**
+**Varianta A: FTP Upload (doporučeno pro hosting)**
 ```bash
-# 1. Nahrajte celou složku na server
-# 2. Nastavte web root na: /public
+# 1. Nahrajte celou složku aplikace-howyouinshit/ na server
+# 2. Kořenová složka je WEB ROOT (ne podsložka public/)
+# 3. Nastavte oprávnění pro storage/
 ```
 
 **Varianta B: Git Clone**
 ```bash
 git clone https://github.com/mhrncal/aplikace-howyouinshit.git
 cd aplikace-howyouinshit
+chmod -R 755 storage/
 ```
+
+**⚠️ DŮLEŽITÉ:** 
+- **Kořen projektu = Web root** (ne podsložka!)
+- `.htaccess` chrání citlivé složky (config, src, storage)
+- Pro FTP hosting prostě nahrajte vše do veřejné složky (public_html, www, htdocs...)
 
 ### 3. Konfigurace
 
@@ -142,18 +156,38 @@ chmod -R 755 public/
 
 ### 6. Web server
 
-**Apache (.htaccess v public/):**
-```apache
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php [QSA,L]
-```
+**✅ Kořen projektu = Web root**
 
-**Nginx:**
+.htaccess automaticky chrání citlivé složky a zajišťuje routing.
+
+**Apache:**
+- Ujistěte se, že `mod_rewrite` je zapnutý
+- `.htaccess` již obsažen v projektu
+
+**Nginx (pokud nepoužíváte Apache):**
 ```nginx
-location / {
-    try_files $uri $uri/ /index.php?$query_string;
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /path/to/aplikace-howyouinshit;
+    index index.php;
+
+    # Block access to sensitive folders
+    location ~ ^/(config|src|storage|database|views)/ {
+        deny all;
+        return 404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        fastcgi_pass unix:/var/run/php/php8.2-fpm.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
 }
 ```
 
@@ -200,6 +234,58 @@ Heslo: Shopcode2024??
 2. Použijte Redis/Memcached pro sessions
 3. Optimalizujte MySQL (innodb_buffer_pool_size)
 4. Nastavte proper caching headers
+
+## 🧩 Modularita & Rozšiřitelnost
+
+Aplikace je navržena tak, aby byla snadno rozšiřitelná o nové moduly.
+
+### Jak přidat nový modul?
+
+Podrobný průvodce najdete v **[MODULES.md](MODULES.md)**
+
+**Rychlý start:**
+
+1. **Vytvořte strukturu modulu:**
+```
+src/Modules/NazevModulu/
+├── Controllers/NazevController.php
+├── Models/NazevModel.php
+├── Services/NazevService.php (volitelné)
+└── Views/
+```
+
+2. **Vytvořte Controller děděním z Module:**
+```php
+use App\Core\Module;
+
+class ProductController extends Module
+{
+    public function index(): void
+    {
+        $this->requireAuth();
+        $this->render('products/index', ['title' => 'Produkty']);
+    }
+}
+```
+
+3. **Vytvořte page soubor:**
+```php
+// products.php
+require_once __DIR__ . '/bootstrap.php';
+use App\Modules\Products\Controllers\ProductController;
+
+$controller = new ProductController();
+$controller->index();
+```
+
+4. **Přidejte do menu** v `views/layouts/main.php`
+
+**Výhody modulárního systému:**
+- ✅ Snadné přidávání funkcí
+- ✅ Oddělené concerns (Model-Service-Controller-View)
+- ✅ Znovupoužitelný kód
+- ✅ Jednoduchá údržba
+- ✅ Rychlý vývoj nových features
 
 ## 📚 Použití
 
