@@ -45,6 +45,15 @@ if (isPost()) {
     
     if ($action === 'delete') {
         $id = (int) post('id');
+        
+        // Kontrola jestli není default
+        $mapping = $mappingModel->findById($id, $userId);
+        
+        if ($mapping && $mapping['is_default']) {
+            flash('error', 'Výchozí mapování nelze smazat!');
+            redirect('/app/products/field-mapping.php');
+        }
+        
         if ($mappingModel->delete($id, $userId)) {
             flash('success', 'Mapování smazáno');
         }
@@ -135,8 +144,13 @@ ob_start();
                     </thead>
                     <tbody>
                         <?php foreach ($productMappings as $mapping): ?>
-                        <tr>
-                            <td><code><?= e($mapping['db_column']) ?></code></td>
+                        <tr class="<?= $mapping['is_default'] ? 'table-light' : '' ?>">
+                            <td>
+                                <code><?= e($mapping['db_column']) ?></code>
+                                <?php if ($mapping['is_default']): ?>
+                                    <i class="bi bi-lock-fill text-muted ms-1" title="Výchozí mapping - nelze měnit"></i>
+                                <?php endif; ?>
+                            </td>
                             <td><code><?= e($mapping['xml_path']) ?></code></td>
                             <td>
                                 <span class="badge bg-secondary"><?= e($mapping['data_type']) ?></span>
@@ -149,24 +163,34 @@ ob_start();
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <form method="POST" class="d-inline">
-                                    <?= csrf() ?>
-                                    <input type="hidden" name="action" value="toggle_active">
-                                    <input type="hidden" name="id" value="<?= $mapping['id'] ?>">
-                                    <button type="submit" class="btn btn-sm <?= $mapping['is_active'] ? 'btn-success' : 'btn-secondary' ?>">
-                                        <?= $mapping['is_active'] ? 'Aktivní' : 'Neaktivní' ?>
-                                    </button>
-                                </form>
+                                <?php if ($mapping['is_default']): ?>
+                                    <span class="badge bg-success">Výchozí</span>
+                                <?php else: ?>
+                                    <form method="POST" class="d-inline">
+                                        <?= csrf() ?>
+                                        <input type="hidden" name="action" value="toggle_active">
+                                        <input type="hidden" name="id" value="<?= $mapping['id'] ?>">
+                                        <button type="submit" class="btn btn-sm <?= $mapping['is_active'] ? 'btn-success' : 'btn-secondary' ?>">
+                                            <?= $mapping['is_active'] ? 'Aktivní' : 'Neaktivní' ?>
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                             </td>
                             <td>
-                                <form method="POST" class="d-inline" onsubmit="return confirm('Opravdu smazat?')">
-                                    <?= csrf() ?>
-                                    <input type="hidden" name="action" value="delete">
-                                    <input type="hidden" name="id" value="<?= $mapping['id'] ?>">
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        <i class="bi bi-trash"></i>
+                                <?php if ($mapping['is_default']): ?>
+                                    <button class="btn btn-sm btn-secondary" disabled title="Výchozí mapping nelze smazat">
+                                        <i class="bi bi-lock"></i> Chráněno
                                     </button>
-                                </form>
+                                <?php else: ?>
+                                    <form method="POST" class="d-inline" onsubmit="return confirm('Opravdu smazat?')">
+                                        <?= csrf() ?>
+                                        <input type="hidden" name="action" value="delete">
+                                        <input type="hidden" name="id" value="<?= $mapping['id'] ?>">
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                <?php endif; ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
