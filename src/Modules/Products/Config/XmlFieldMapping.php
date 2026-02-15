@@ -184,23 +184,34 @@ class XmlFieldMapping
             ],
             
             'standard_price' => [
-                'xml_path' => 'PRICE_VAT',
+                'xml_path' => 'PRICE',  // Ve variantách je PRICE, ne PRICE_VAT
                 'transform' => 'floatval',
                 'default' => 0,
             ],
             
             'stock' => [
-                'xml_path' => 'STOCK/AMOUNT',
-                'transform' => 'intval',
+                'xml_path' => 'STOCK/WAREHOUSES/WAREHOUSE/VALUE',  // Sečte hodnoty ze všech skladů
+                'transform' => function($values) {
+                    if (is_array($values)) {
+                        return array_sum(array_map('intval', $values));
+                    }
+                    return intval($values);
+                },
                 'default' => 0,
             ],
             
             'availability_status' => [
-                'xml_path' => 'STOCK/AMOUNT',
-                'transform' => function($value) {
-                    return (int)$value > 0 ? 'Skladem' : 'Není skladem';
+                'xml_path' => 'STOCK/WAREHOUSES/WAREHOUSE/VALUE',
+                'transform' => function($values) {
+                    $total = 0;
+                    if (is_array($values)) {
+                        $total = array_sum(array_map('intval', $values));
+                    } else {
+                        $total = intval($values);
+                    }
+                    return $total > 0 ? 'Skladem' : 'Vyprodáno';
                 },
-                'default' => 'Skladem',
+                'default' => 'Vyprodáno',
             ],
             
             // === PŘÍKLADY DALŠÍCH POLÍ PRO VARIANTY ===
