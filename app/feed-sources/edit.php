@@ -48,6 +48,17 @@ if (isPost()) {
     }
     
     if (empty($errors)) {
+        // Mapování feed_type na správný formát
+        $feedTypeMap = [
+            'shoptet_products' => 'shoptet_products',
+            'shoptet_orders' => 'shoptet_orders',
+            'xml' => 'xml',
+            'json' => 'json',
+            'csv' => 'csv',
+        ];
+        
+        $data['feed_type'] = $feedTypeMap[$data['feed_type']] ?? 'shoptet_products';
+        
         if ($feedSourceModel->update($feedId, $userId, $data)) {
             flash('success', 'Feed zdroj byl úspěšně aktualizován');
             redirect('/app/feed-sources/');
@@ -107,10 +118,15 @@ ob_start();
                     <div class="mb-3">
                         <label class="form-label">Typ feedu</label>
                         <select class="form-select" name="feed_type">
-                            <option value="xml" <?= old('feed_type', $feed['feed_type']) === 'xml' ? 'selected' : '' ?>>XML</option>
+                            <option value="shoptet_products" <?= old('feed_type', $feed['feed_type']) === 'shoptet_products' ? 'selected' : '' ?>>Marketingový Shoptet feed (produkty)</option>
+                            <option value="shoptet_orders" <?= old('feed_type', $feed['feed_type']) === 'shoptet_orders' ? 'selected' : '' ?>>Shoptet objednávky</option>
+                            <option value="xml" <?= old('feed_type', $feed['feed_type']) === 'xml' ? 'selected' : '' ?>>Obecný XML</option>
                             <option value="json" <?= old('feed_type', $feed['feed_type']) === 'json' ? 'selected' : '' ?>>JSON</option>
                             <option value="csv" <?= old('feed_type', $feed['feed_type']) === 'csv' ? 'selected' : '' ?>>CSV</option>
                         </select>
+                        <div class="form-text">
+                            <strong>Shoptet produkty:</strong> Automatické mapování NAME, CODE, PRICE_VAT, atd.
+                        </div>
                     </div>
                     
                     <div class="form-check mb-4">
