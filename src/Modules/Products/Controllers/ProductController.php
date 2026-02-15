@@ -57,7 +57,7 @@ class ProductController extends Module
         
         if (!$product) {
             flash('error', 'Produkt nebyl nalezen');
-            redirect('/products.php');
+            redirect('/app/products/');
         }
         
         // Načtení variant
