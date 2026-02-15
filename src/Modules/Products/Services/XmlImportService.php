@@ -19,6 +19,15 @@ class XmlImportService
         $this->db = Database::getInstance();
         $this->productModel = new Product();
     }
+    
+    /**
+     * Helper pro logování importu (používá kategorii 'import')
+     */
+    private function logImport(string $level, string $message, array $context = []): void
+    {
+        $method = strtolower($level);
+        Logger::$method($message, $context, 'import');
+    }
 
     /**
      * Importuje produkty z XML URL - STREAMOVÉ ZPRACOVÁNÍ
