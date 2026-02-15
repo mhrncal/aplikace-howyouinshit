@@ -3,7 +3,7 @@ require_once __DIR__ . '/bootstrap.php';
 
 // Pokud už je přihlášen, redirect na dashboard
 if ($auth->check()) {
-    redirect('/dashboard.php');
+    redirect('/app/dashboard/');
 }
 
 $error = null;
@@ -19,7 +19,7 @@ if (isPost()) {
         $error = 'Vyplňte email a heslo.';
     } elseif ($auth->login($email, $password)) {
         // Úspěšné přihlášení
-        $intendedUrl = $_SESSION['intended_url'] ?? '/dashboard.php';
+        $intendedUrl = $_SESSION['intended_url'] ?? '/app/dashboard/';
         unset($_SESSION['intended_url']);
         redirect($intendedUrl);
     } else {

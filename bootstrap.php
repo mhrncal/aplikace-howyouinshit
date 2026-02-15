@@ -16,7 +16,10 @@ date_default_timezone_set('Europe/Prague');
 // Session
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.cookie_httponly', '1');
-    ini_set('session.cookie_secure', '1');
+    // Pouze pokud je HTTPS
+    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+        ini_set('session.cookie_secure', '1');
+    }
     ini_set('session.use_strict_mode', '1');
     session_name('ESHOP_ANALYTICS_SESSION');
     session_start();
