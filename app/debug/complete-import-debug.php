@@ -24,9 +24,39 @@ use App\Modules\Products\Models\Product;
 use App\Modules\Products\Services\FlexibleXmlParser;
 
 $userId = 1;
-$feedId = 5;
 
-echo "<div class='step'><h2>KROK 1: Načtení feedu</h2>";
+// Automaticky najdi feed
+$db = App\Core\Database::getInstance();
+$feeds = $db->fetchAll("SELECT id, name, feed_type FROM feed_sources WHERE user_id = ?", [$userId]);
+
+if (empty($feeds)) {
+    echo "<span class='err'>❌ Žádné feedy nenalezeny!</span><br>";
+    echo "Vytvoř nový feed na /app/feed-sources/create.php";
+    exit;
+}
+
+echo "<h3>Dostupné feedy:</h3>";
+echo "<table border='1' cellpadding='5'>";
+echo "<tr><th>ID</th><th>Název</th><th>Typ</th><th>Akce</th></tr>";
+foreach ($feeds as $f) {
+    echo "<tr>";
+    echo "<td>{$f['id']}</td>";
+    echo "<td>{$f['name']}</td>";
+    echo "<td>{$f['feed_type']}</td>";
+    echo "<td><a href='?feed_id={$f['id']}'>Testovat</a></td>";
+    echo "</tr>";
+}
+echo "</table><br>";
+
+// Pokud není zadáno feed_id, skonči
+if (!isset($_GET['feed_id'])) {
+    echo "<span class='warn'>⚠️ Vyber feed kliknutím na 'Testovat'</span>";
+    exit;
+}
+
+$feedId = (int) $_GET['feed_id'];
+
+echo "<div class='step'><h2>KROK 1: Načtení feedu #{$feedId}</h2>";
 
 $feedModel = new FeedSource();
 $feed = $feedModel->findById($feedId, $userId);
