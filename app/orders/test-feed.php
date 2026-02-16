@@ -14,8 +14,7 @@ try {
     echo "   ✅ Uživatel přihlášen\n";
     
     echo "3. Načítám OrderFeedSource model...\n";
-    use App\Models\OrderFeedSource;
-    $feedModel = new OrderFeedSource();
+    $feedModel = new \App\Models\OrderFeedSource();
     echo "   ✅ Model načten\n";
     
     echo "4. Získávám userId...\n";
