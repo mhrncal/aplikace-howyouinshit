@@ -4,12 +4,14 @@ require_once __DIR__ . '/../../bootstrap.php';
 $auth->requireAuth();
 
 use App\Core\Database;
+use App\Models\Order;
+use App\Models\Cost;
 
 $db = Database::getInstance();
 $userId = $auth->userId();
 $isSuperAdmin = $auth->isSuperAdmin();
 
-// Statistiky
+// Statistiky produktů a feedů
 $stats = [
     'products' => $db->fetchOne(
         "SELECT COUNT(*) as count FROM products WHERE " . ($isSuperAdmin ? "1=1" : "user_id = ?"),
@@ -25,6 +27,18 @@ if ($isSuperAdmin) {
     $stats['users'] = $db->fetchOne("SELECT COUNT(*) as count FROM users")['count'];
     $stats['users_active'] = $db->fetchOne("SELECT COUNT(*) as count FROM users WHERE is_active = 1")['count'];
 }
+
+// Analytika výnosů (tento měsíc)
+$orderModel = new Order();
+$currentMonth = date('Y-m-01');
+$currentMonthEnd = date('Y-m-t');
+$orderAnalytics = $orderModel->getAnalytics($userId, $currentMonth, $currentMonthEnd);
+
+// Analytika nákladů (tento měsíc)
+$costModel = new Cost();
+$currentYear = date('Y');
+$currentMonthNum = date('n');
+$costData = $costModel->getMonthlyBreakdown($userId, $currentYear, $currentMonthNum);
 
 // Poslední importy
 $recentImports = $db->fetchAll(
@@ -42,7 +56,60 @@ $title = 'Dashboard';
 ob_start();
 ?>
 
+<!-- Výnosy a náklady -->
 <div class="row mb-4">
+    <div class="col-md-12">
+        <h5 class="mb-3">Finanční přehled (tento měsíc)</h5>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+            <i class="bi bi-cart-check" style="font-size: 2rem; opacity: 0.8;"></i>
+            <h3><?= formatPrice($orderAnalytics['totals']['total_revenue'] ?? 0) ?></h3>
+            <p>Obrat z objednávek</p>
+            <small><?= number_format($orderAnalytics['totals']['order_count'] ?? 0) ?> objednávek</small>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+            <i class="bi bi-graph-up-arrow" style="font-size: 2rem; opacity: 0.8;"></i>
+            <h3><?= formatPrice($orderAnalytics['totals']['total_profit'] ?? 0) ?></h3>
+            <p>Zisk z objednávek</p>
+            <small>Marže: <?= number_format($orderAnalytics['totals']['avg_margin'] ?? 0, 1) ?>%</small>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+            <i class="bi bi-wallet2" style="font-size: 2rem; opacity: 0.8;"></i>
+            <h3><?= formatPrice($costData['total'] ?? 0) ?></h3>
+            <p>Provozní náklady</p>
+            <small>Fixní: <?= formatPrice($costData['fixed'] ?? 0) ?></small>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #8b5cf6, #7c3aed);">
+            <i class="bi bi-calculator" style="font-size: 2rem; opacity: 0.8;"></i>
+            <?php 
+            $totalRevenue = ($orderAnalytics['totals']['total_revenue'] ?? 0);
+            $totalCosts = ($orderAnalytics['totals']['total_cost'] ?? 0) + ($costData['total'] ?? 0);
+            $netProfit = $totalRevenue - $totalCosts;
+            ?>
+            <h3 class="<?= $netProfit >= 0 ? '' : 'text-warning' ?>"><?= formatPrice($netProfit) ?></h3>
+            <p>Čistý zisk celkem</p>
+            <small>Výnosy - všechny náklady</small>
+        </div>
+    </div>
+</div>
+
+<!-- Produkty a uživatelé -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h5 class="mb-3">Systémové statistiky</h5>
+    </div>
+    
     <div class="col-md-4 mb-3">
         <div class="stat-card">
             <i class="bi bi-box-seam" style="font-size: 2rem; opacity: 0.8;"></i>
@@ -138,15 +205,30 @@ ob_start();
                     <i class="bi bi-box-seam me-2"></i>Produkty
                 </a>
             </div>
+            <div class="col-md-3">
+                <a href="/app/orders/" class="btn btn-outline-success w-100">
+                    <i class="bi bi-cart-check me-2"></i>Objednávky
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/app/orders/analytics.php" class="btn btn-outline-info w-100">
+                    <i class="bi bi-graph-up me-2"></i>Analytika výnosů
+                </a>
+            </div>
+            <div class="col-md-3">
+                <a href="/app/costs/" class="btn btn-outline-warning w-100">
+                    <i class="bi bi-wallet2 me-2"></i>Provozní náklady
+                </a>
+            </div>
             <?php if ($isSuperAdmin): ?>
             <div class="col-md-3">
-                <a href="/app/users/index.php" class="btn btn-outline-success w-100">
+                <a href="/app/users/index.php" class="btn btn-outline-danger w-100">
                     <i class="bi bi-people me-2"></i>Uživatelé
                 </a>
             </div>
             <?php endif; ?>
             <div class="col-md-3">
-                <a href="/app/settings/profile.php" class="btn btn-outline-warning w-100">
+                <a href="/app/settings/profile.php" class="btn btn-outline-secondary w-100">
                     <i class="bi bi-person-circle me-2"></i>Můj profil
                 </a>
             </div>

@@ -304,39 +304,75 @@
         
         <ul class="nav flex-column">
             <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'dashboard.php') !== false ? 'active' : '' ?>" href="/app/dashboard/">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'dashboard') !== false ? 'active' : '' ?>" href="/app/dashboard/">
                     <i class="bi bi-speedometer2"></i>
                     <span>Dashboard</span>
                 </a>
             </li>
+            
+            <li class="nav-item mt-3">
+                <div class="px-3 py-2">
+                    <small class="text-uppercase" style="color: #64748b; font-size: 0.7rem; font-weight: 600;">Produkty</small>
+                </div>
+            </li>
             <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'products.php') !== false ? 'active' : '' ?>" href="/app/products/">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', '/products/') !== false && strpos($_SERVER['PHP_SELF'] ?? '', 'feed-sources') === false ? 'active' : '' ?>" href="/app/products/">
                     <i class="bi bi-box-seam"></i>
                     <span>Produkty</span>
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'field-mapping.php') !== false ? 'active' : '' ?>" href="/app/products/field-mapping.php">
-                    <i class="bi bi-diagram-3"></i>
-                    <span>Mapování polí</span>
-                </a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'feed-sources.php') !== false ? 'active' : '' ?>" href="/app/feed-sources/">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'feed-sources.php') !== false && strpos($_SERVER['PHP_SELF'] ?? '', '/orders/') === false ? 'active' : '' ?>" href="/app/feed-sources/">
                     <i class="bi bi-link-45deg"></i>
-                    <span>Feed zdroje</span>
+                    <span>Feed zdroje produktů</span>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'import-logs.php') !== false ? 'active' : '' ?>" href="/app/import-logs/">
                     <i class="bi bi-clock-history"></i>
                     <span>Import logy</span>
-            <li class="nav-item">
-                <a class="nav-link" href="/app/costs/">
-                    <i class="bi bi-wallet2"></i>
-                    <span>Náklady</span>
                 </a>
             </li>
+            
+            <li class="nav-item mt-3">
+                <div class="px-3 py-2">
+                    <small class="text-uppercase" style="color: #64748b; font-size: 0.7rem; font-weight: 600;">Výnosy</small>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', '/orders/') !== false && strpos($_SERVER['PHP_SELF'] ?? '', 'analytics') === false && strpos($_SERVER['PHP_SELF'] ?? '', 'feed-sources') === false && strpos($_SERVER['PHP_SELF'] ?? '', 'mapping') === false ? 'active' : '' ?>" href="/app/orders/">
+                    <i class="bi bi-cart-check"></i>
+                    <span>Objednávky</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'orders/analytics') !== false ? 'active' : '' ?>" href="/app/orders/analytics.php">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Analytika výnosů</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'orders/feed-sources') !== false ? 'active' : '' ?>" href="/app/orders/feed-sources.php">
+                    <i class="bi bi-rss"></i>
+                    <span>Feed zdroje objednávek</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', 'shipping-mapping') !== false || strpos($_SERVER['PHP_SELF'] ?? '', 'billing-mapping') !== false ? 'active' : '' ?>" href="/app/orders/shipping-mapping.php">
+                    <i class="bi bi-sliders"></i>
+                    <span>Mapování nákladů</span>
+                </a>
+            </li>
+            
+            <li class="nav-item mt-3">
+                <div class="px-3 py-2">
+                    <small class="text-uppercase" style="color: #64748b; font-size: 0.7rem; font-weight: 600;">Náklady</small>
+                </div>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', '/costs/') !== false ? 'active' : '' ?>" href="/app/costs/">
+                    <i class="bi bi-wallet2"></i>
+                    <span>Provozní náklady</span>
                 </a>
             </li>
             
