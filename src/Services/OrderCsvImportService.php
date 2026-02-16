@@ -13,10 +13,10 @@ use App\Models\BillingCost;
  */
 class OrderCsvImportService
 {
-    private Database $db;
-    private Order $orderModel;
-    private ShippingCost $shippingModel;
-    private BillingCost $billingModel;
+    private $db;
+    private $orderModel;
+    private $shippingModel;
+    private $billingModel;
 
     public function __construct()
     {
@@ -97,10 +97,12 @@ class OrderCsvImportService
         $itemsImported = 0;
         $currentOrderData = [];
         $lineCount = 0;
-        $batchSize = 50; // Zpracuj po 50 objednávkách
+        $batchSize = 50;
+        
+        $self = $this; // Reference na $this pro použití v closure
         
         // Write callback - zpracovává data po částech
-        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$buffer, &$header, &$currentOrderData, &$ordersProcessed, &$itemsImported, &$lineCount, $userId, $batchSize) {
+        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$buffer, &$header, &$currentOrderData, &$ordersProcessed, &$itemsImported, &$lineCount, $userId, $batchSize, $self) {
             $buffer .= $data;
             
             // Zpracuj kompletní řádky
@@ -112,7 +114,7 @@ class OrderCsvImportService
                 
                 // První řádek = hlavička
                 if ($header === null) {
-                    $header = $this->parseCsvLine($line);
+                    $header = str_getcsv($line, ';', '"');
                     // Odstranění BOM
                     $header[0] = str_replace("\xEF\xBB\xBF", '', $header[0]);
                     continue;
@@ -122,15 +124,15 @@ class OrderCsvImportService
                     continue;
                 }
                 
-                $row = $this->parseCsvLine($line);
+                $row = str_getcsv($line, ';', '"');
                 
                 if (count($row) !== count($header)) {
                     Logger::warning('CSV line mismatch', ['line' => $lineCount, 'expected' => count($header), 'got' => count($row)]);
                     continue;
                 }
                 
-                $data = array_combine($header, $row);
-                $orderCode = $data['code'] ?? '';
+                $rowData = array_combine($header, $row);
+                $orderCode = $rowData['code'] ?? '';
                 
                 if (empty($orderCode)) {
                     continue;
@@ -139,20 +141,62 @@ class OrderCsvImportService
                 // Nová objednávka?
                 if (!isset($currentOrderData[$orderCode])) {
                     $currentOrderData[$orderCode] = [
-                        'order' => $this->parseOrderData($userId, $data),
+                        'order' => [
+                            'user_id' => $userId,
+                            'order_code' => $rowData['code'],
+                            'order_date' => $rowData['date'],
+                            'status' => $rowData['statusName'],
+                            'currency' => 'CZK',
+                            'exchange_rate' => !empty($rowData['currencyExchangeRate']) ? (float) str_replace(',', '.', $rowData['currencyExchangeRate']) : 1.0,
+                            'source' => $rowData['sourceName'] ?? null,
+                            'customer_group' => $rowData['customerGroupName'] ?? null,
+                        ],
                         'items' => []
                     ];
                 }
                 
                 // Přidej položku
-                $item = $this->parseOrderItem($data);
-                if ($item) {
+                $type = $rowData['orderItemType'];
+                
+                if (in_array($type, ['product', 'shipping', 'billing', 'discount'])) {
+                    $unitPriceSale = (float) str_replace([' ', ','], ['', '.'], $rowData['orderItemUnitDiscountPriceWithVat'] ?? '0');
+                    $unitPriceCost = (float) str_replace([' ', ','], ['', '.'], $rowData['orderItemUnitPurchasePriceWithVat'] ?? '0');
+                    $amount = (int) ($rowData['orderItemAmount'] ?? 1);
+                    
+                    $item = [
+                        'item_type' => $type,
+                        'item_name' => $rowData['orderItemName'],
+                        'item_code' => $rowData['orderItemCode'] ?? null,
+                        'variant_name' => $rowData['orderItemVariantName'] ?? null,
+                        'manufacturer' => $rowData['orderItemManufacturer'] ?? null,
+                        'supplier' => $rowData['orderItemSupplier'] ?? null,
+                        'amount' => $amount,
+                        'unit_price_sale' => $unitPriceSale,
+                        'unit_price_cost' => $unitPriceCost,
+                        'total_revenue' => 0,
+                        'total_cost' => 0,
+                        'total_profit' => 0
+                    ];
+                    
                     $currentOrderData[$orderCode]['items'][] = $item;
                 }
                 
-                // BATCH ZPRACOVÁNÍ - ulož po X objednávkách
+                // BATCH ZPRACOVÁNÍ
                 if (count($currentOrderData) >= $batchSize) {
-                    $this->saveBatch($userId, $currentOrderData, $ordersProcessed, $itemsImported);
+                    foreach ($currentOrderData as $orderCode => $orderDataItem) {
+                        try {
+                            $orderId = $self->saveOrder($userId, $orderDataItem);
+                            if ($orderId) {
+                                $ordersProcessed[$orderCode] = $orderId;
+                                $itemsImported += count($orderDataItem['items']);
+                            }
+                        } catch (\Exception $e) {
+                            Logger::error('Failed to save order in batch', [
+                                'order_code' => $orderCode,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
+                    }
                     $currentOrderData = [];
                 }
             }
@@ -175,7 +219,20 @@ class OrderCsvImportService
         
         // Ulož zbývající data
         if (!empty($currentOrderData)) {
-            $this->saveBatch($userId, $currentOrderData, $ordersProcessed, $itemsImported);
+            foreach ($currentOrderData as $orderCode => $orderDataItem) {
+                try {
+                    $orderId = $this->saveOrder($userId, $orderDataItem);
+                    if ($orderId) {
+                        $ordersProcessed[$orderCode] = $orderId;
+                        $itemsImported += count($orderDataItem['items']);
+                    }
+                } catch (\Exception $e) {
+                    Logger::error('Failed to save order', [
+                        'order_code' => $orderCode,
+                        'error' => $e->getMessage()
+                    ]);
+                }
+            }
         }
         
         return [

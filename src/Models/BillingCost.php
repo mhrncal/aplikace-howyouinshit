@@ -9,7 +9,7 @@ use App\Core\Database;
  */
 class BillingCost
 {
-    private Database $db;
+    private $db;
 
     public function __construct()
     {

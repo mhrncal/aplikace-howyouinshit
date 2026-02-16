@@ -9,7 +9,7 @@ use App\Core\Database;
  */
 class OrderFeedSource
 {
-    private Database $db;
+    private $db;
 
     public function __construct()
     {
