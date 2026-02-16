@@ -9,7 +9,7 @@ use App\Models\ShippingCost;
 use App\Models\BillingCost;
 
 /**
- * OrderCsvImportService - Import objednávek z CSV
+ * OrderCsvImportService - STREAMOVÝ import objednávek z CSV
  */
 class OrderCsvImportService
 {
@@ -27,30 +27,28 @@ class OrderCsvImportService
     }
 
     /**
-     * Importuje objednávky z CSV URL
+     * Importuje objednávky z CSV URL - STREAMOVĚ
      */
-    public function importFromUrl(int $userId, string $url): array
+    public function importFromUrl(int $userId, string $url, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
     {
         try {
             $startTime = microtime(true);
+            $startMemory = memory_get_usage();
             
-            // Stažení CSV
-            $csvContent = $this->downloadCsv($url);
+            Logger::info('Starting order CSV import', ['user_id' => $userId, 'url' => $url]);
             
-            if (!$csvContent) {
-                return ['success' => false, 'error' => 'Nepodařilo se stáhnout CSV'];
-            }
-            
-            // Parsování
-            $result = $this->parseCsv($userId, $csvContent);
+            // STREAMOVÉ zpracování - nestahuje celý soubor do paměti
+            $result = $this->parseStreamCsv($userId, $url, $httpAuthUser, $httpAuthPass);
             
             $duration = round(microtime(true) - $startTime, 2);
+            $memoryPeak = round((memory_get_peak_usage() - $startMemory) / 1024 / 1024, 2);
             
             Logger::info('Orders imported', [
                 'user_id' => $userId,
                 'orders' => $result['orders_imported'],
                 'items' => $result['items_imported'],
-                'duration' => $duration
+                'duration' => $duration,
+                'memory_mb' => $memoryPeak
             ]);
             
             return [
@@ -63,7 +61,8 @@ class OrderCsvImportService
         } catch (\Exception $e) {
             Logger::error('Order import failed', [
                 'user_id' => $userId,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
             return ['success' => false, 'error' => $e->getMessage()];
@@ -71,86 +70,148 @@ class OrderCsvImportService
     }
 
     /**
-     * Stáhne CSV z URL
+     * STREAMOVÉ parsování CSV pomocí cURL
      */
-    private function downloadCsv(string $url): ?string
+    private function parseStreamCsv(int $userId, string $url, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
     {
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 60,
-                'user_agent' => 'Mozilla/5.0'
-            ]
+        $ch = curl_init($url);
+        
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => false,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_MAXREDIRS => 5,
+            CURLOPT_TIMEOUT => 300,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_USERAGENT => 'Mozilla/5.0 (compatible; OrderImporter/1.0)',
         ]);
         
-        $content = @file_get_contents($url, false, $context);
-        return $content ?: null;
-    }
-
-    /**
-     * Parsuje CSV a ukládá objednávky
-     */
-    private function parseCsv(int $userId, string $csvContent): array
-    {
-        $lines = explode("\n", $csvContent);
-        
-        if (empty($lines)) {
-            throw new \Exception('CSV je prázdné');
+        // HTTP autentizace
+        if ($httpAuthUser && $httpAuthPass) {
+            curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+            curl_setopt($ch, CURLOPT_USERPWD, "$httpAuthUser:$httpAuthPass");
         }
         
-        // První řádek = hlavička
-        $header = str_getcsv(array_shift($lines), ';');
-        
-        // Odstranění BOM
-        $header[0] = str_replace("\xEF\xBB\xBF", '', $header[0]);
-        
+        $buffer = '';
+        $header = null;
         $ordersProcessed = [];
         $itemsImported = 0;
         $currentOrderData = [];
+        $lineCount = 0;
+        $batchSize = 50; // Zpracuj po 50 objednávkách
         
-        foreach ($lines as $line) {
-            if (empty(trim($line))) {
-                continue;
+        // Write callback - zpracovává data po částech
+        curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) use (&$buffer, &$header, &$currentOrderData, &$ordersProcessed, &$itemsImported, &$lineCount, $userId, $batchSize) {
+            $buffer .= $data;
+            
+            // Zpracuj kompletní řádky
+            while (($pos = strpos($buffer, "\n")) !== false) {
+                $line = substr($buffer, 0, $pos);
+                $buffer = substr($buffer, $pos + 1);
+                
+                $lineCount++;
+                
+                // První řádek = hlavička
+                if ($header === null) {
+                    $header = $this->parseCsvLine($line);
+                    // Odstranění BOM
+                    $header[0] = str_replace("\xEF\xBB\xBF", '', $header[0]);
+                    continue;
+                }
+                
+                if (empty(trim($line))) {
+                    continue;
+                }
+                
+                $row = $this->parseCsvLine($line);
+                
+                if (count($row) !== count($header)) {
+                    Logger::warning('CSV line mismatch', ['line' => $lineCount, 'expected' => count($header), 'got' => count($row)]);
+                    continue;
+                }
+                
+                $data = array_combine($header, $row);
+                $orderCode = $data['code'] ?? '';
+                
+                if (empty($orderCode)) {
+                    continue;
+                }
+                
+                // Nová objednávka?
+                if (!isset($currentOrderData[$orderCode])) {
+                    $currentOrderData[$orderCode] = [
+                        'order' => $this->parseOrderData($userId, $data),
+                        'items' => []
+                    ];
+                }
+                
+                // Přidej položku
+                $item = $this->parseOrderItem($data);
+                if ($item) {
+                    $currentOrderData[$orderCode]['items'][] = $item;
+                }
+                
+                // BATCH ZPRACOVÁNÍ - ulož po X objednávkách
+                if (count($currentOrderData) >= $batchSize) {
+                    $this->saveBatch($userId, $currentOrderData, $ordersProcessed, $itemsImported);
+                    $currentOrderData = [];
+                }
             }
             
-            $row = str_getcsv($line, ';');
-            
-            if (count($row) !== count($header)) {
-                continue; // Přeskočit chybné řádky
-            }
-            
-            $data = array_combine($header, $row);
-            
-            $orderCode = $data['code'];
-            
-            // Nová objednávka?
-            if (!isset($currentOrderData[$orderCode])) {
-                $currentOrderData[$orderCode] = [
-                    'order' => $this->parseOrderData($userId, $data),
-                    'items' => []
-                ];
-            }
-            
-            // Přidej položku
-            $item = $this->parseOrderItem($data);
-            if ($item) {
-                $currentOrderData[$orderCode]['items'][] = $item;
-            }
+            return strlen($data);
+        });
+        
+        $success = curl_exec($ch);
+        $error = curl_error($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if (!$success) {
+            throw new \Exception("cURL error: $error");
         }
         
-        // Ulož všechny objednávky
-        foreach ($currentOrderData as $orderCode => $orderData) {
-            $orderId = $this->saveOrder($userId, $orderData);
-            
-            if ($orderId) {
-                $ordersProcessed[$orderCode] = $orderId;
-                $itemsImported += count($orderData['items']);
-            }
+        if ($httpCode >= 400) {
+            throw new \Exception("HTTP error: $httpCode");
+        }
+        
+        // Ulož zbývající data
+        if (!empty($currentOrderData)) {
+            $this->saveBatch($userId, $currentOrderData, $ordersProcessed, $itemsImported);
         }
         
         return [
             'orders_imported' => count($ordersProcessed),
             'items_imported' => $itemsImported
         ];
+    }
+
+    /**
+     * Parsuje CSV řádek (respektuje uvozovky a středníky)
+     */
+    private function parseCsvLine(string $line): array
+    {
+        return str_getcsv($line, ';', '"');
+    }
+
+    /**
+     * Ulož batch objednávek
+     */
+    private function saveBatch(int $userId, array &$orderData, array &$ordersProcessed, int &$itemsImported): void
+    {
+        foreach ($orderData as $orderCode => $data) {
+            try {
+                $orderId = $this->saveOrder($userId, $data);
+                
+                if ($orderId) {
+                    $ordersProcessed[$orderCode] = $orderId;
+                    $itemsImported += count($data['items']);
+                }
+            } catch (\Exception $e) {
+                Logger::error('Failed to save order in batch', [
+                    'order_code' => $orderCode,
+                    'error' => $e->getMessage()
+                ]);
+            }
+        }
     }
 
     /**
