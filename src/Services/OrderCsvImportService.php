@@ -269,6 +269,9 @@ class OrderCsvImportService
                 
             case 'shipping':
                 // Doprava: revenue - náklady z mappingu
+                // Automaticky vytvoř mapping pokud neexistuje
+                $this->ensureShippingMapping($userId, $item['item_code'], $item['item_name']);
+                
                 $revenue = $item['unit_price_sale'];
                 $cost = $this->shippingModel->getCost($userId, $item['item_code']);
                 $profit = $revenue - $cost;
@@ -276,6 +279,9 @@ class OrderCsvImportService
                 
             case 'billing':
                 // Platba: revenue - náklady (fixní + %)
+                // Automaticky vytvoř mapping pokud neexistuje
+                $this->ensureBillingMapping($userId, $item['item_code'], $item['item_name']);
+                
                 $revenue = $item['unit_price_sale'];
                 $cost = $this->billingModel->calculateCost($userId, $item['item_code'], $orderTotal);
                 $profit = $revenue - $cost;
@@ -299,5 +305,39 @@ class OrderCsvImportService
         $item['total_profit'] = $profit;
         
         return $item;
+    }
+
+    /**
+     * Zajistí existenci shipping mappingu
+     */
+    private function ensureShippingMapping(int $userId, ?string $code, string $name): void
+    {
+        if (empty($code)) {
+            return;
+        }
+        
+        $existing = $this->shippingModel->findByCode($userId, $code);
+        
+        if (!$existing) {
+            // Vytvoř s výchozími hodnotami
+            $this->shippingModel->upsert($userId, $code, $name, 0, true);
+        }
+    }
+
+    /**
+     * Zajistí existenci billing mappingu
+     */
+    private function ensureBillingMapping(int $userId, ?string $code, string $name): void
+    {
+        if (empty($code)) {
+            return;
+        }
+        
+        $existing = $this->billingModel->findByCode($userId, $code);
+        
+        if (!$existing) {
+            // Vytvoř s výchozími hodnotami
+            $this->billingModel->upsert($userId, $code, $name, 0, 0, true);
+        }
     }
 }
