@@ -50,9 +50,6 @@ class XmlImportService
         $this->feedSourceId = $feedSourceId;
         $this->userId = $userId;
         
-        // KONTROLA MAPPINGŮ - pokud neexistují, vytvoř výchozí
-        $this->ensureDefaultMappings($feedSourceId, $userId);
-        
         $logId = $this->createImportLog($userId, $feedSourceId);
         
         try {
@@ -287,15 +284,6 @@ class XmlImportService
     /**
      * Zajistí že existují výchozí mappingy (hardcoded, ne v DB)
      */
-    private function ensureDefaultMappings(int $feedSourceId, int $userId): void
-    {
-        // VÝCHOZÍ MAPPINGY jsou nyní HARDCODED v getDefaultMappings()
-        // Neukládáme je do DB - uživatel je nemůže měnit
-        // V DB budou JEN custom mappingy přidané uživatelem
-        
-        $this->logImport('info', 'Using hardcoded default mappings (not in DB)', []);
-    }
-
     /**
      * Vytvoří import log
      */
@@ -545,22 +533,13 @@ class XmlImportService
     
     /**
      * Parsuje jednotlivý SHOPITEM element (SHOPTET FORMÁT)
-     * POUŽÍVÁ DB MAPPINGY POKUD EXISTUJÍ, JINAK FALLBACK NA CONFIG!
+     * POUŽÍVÁ FIXNÍ MAPPING Z CONFIG!
      */
     private function parseProductElement(\SimpleXMLElement $item, int $userId): ?array
     {
         try {
-            // Načti mapping z DB (cache by se hodila)
-            $mappingModel = new \App\Modules\Products\Models\FieldMapping();
-            $dbMappings = $mappingModel->getAllForUser($userId, null, 'product');
-            
-            // Pokud existují DB mappingy, použij je
-            if (!empty($dbMappings)) {
-                $mapping = $mappingModel->toConfigFormat($dbMappings);
-            } else {
-                // Fallback na statickou konfiguraci
-                $mapping = \App\Modules\Products\Config\XmlFieldMapping::getProductMapping();
-            }
+            // Použij FIXNÍ mapping z config
+            $mapping = \App\Modules\Products\Config\XmlFieldMapping::getProductMapping();
             
             $product = ['user_id' => $userId];
             
@@ -575,18 +554,11 @@ class XmlImportService
                 return null;
             }
             
-            // Varianty - TAKÉ s field mappingem
+            // Varianty - FIXNÍ mapping
             $variants = [];
             
             if (isset($item->VARIANTS->VARIANT)) {
-                // Načti variant mapping z DB
-                $dbVariantMappings = $mappingModel->getAllForUser($userId, null, 'variant');
-                
-                if (!empty($dbVariantMappings)) {
-                    $variantMapping = $mappingModel->toConfigFormat($dbVariantMappings);
-                } else {
-                    $variantMapping = \App\Modules\Products\Config\XmlFieldMapping::getVariantMapping();
-                }
+                $variantMapping = \App\Modules\Products\Config\XmlFieldMapping::getVariantMapping();
                 
                 foreach ($item->VARIANTS->VARIANT as $variant) {
                     $variantData = [];
@@ -612,9 +584,8 @@ class XmlImportService
             
             Logger::info('Product parsed', [
                 'name' => substr($product['name'], 0, 50),
-                'code' => $product['code'],
-                'variants_count' => count($variants),
-                'used_db_mappings' => !empty($dbMappings)
+                'code' => $product['code'] ?? '',
+                'variants_count' => count($variants)
             ]);
             
             return $product;

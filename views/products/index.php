@@ -21,7 +21,7 @@
                 <input type="text" 
                        class="form-control" 
                        name="search" 
-                       placeholder="Hledat podle názvu, kódu, EAN..."
+                       placeholder="Hledat podle názvu, kódu..."
                        value="<?= e($search ?? '') ?>">
             </div>
             <div class="col-md-2">
@@ -48,10 +48,10 @@
                     <thead>
                         <tr>
                             <th>Název</th>
-                            <th>Kód / EAN</th>
+                            <th>Kód / Varianty</th>
                             <th>Kategorie</th>
-                            <th>Cena</th>
-                            <th>Sklad</th>
+                            <th>Výrobce</th>
+                            <th>Dodavatel</th>
                             <?php if ($auth->isSuperAdmin() && isset($products[0]['user_name'])): ?>
                                 <th>Uživatel</th>
                             <?php endif; ?>
@@ -72,7 +72,6 @@
                                     <small class="text-muted d-block mb-1"><?= $product['variant_count'] ?> <?= $product['variant_count'] == 1 ? 'kód' : 'kódů' ?>:</small>
                                     <?php 
                                     $codes = array_filter(array_column($product['variants'], 'code'));
-                                    $eans = array_filter(array_column($product['variants'], 'ean'));
                                     ?>
                                     <?php if (!empty($codes)): ?>
                                         <?php foreach (array_slice($codes, 0, 2) as $code): ?>
@@ -85,42 +84,14 @@
                                 <?php else: ?>
                                     <?php if (!empty($product['code'])): ?>
                                         <div><code><?= e($product['code']) ?></code></div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($product['ean'])): ?>
-                                        <small class="text-muted"><?= e($product['ean']) ?></small>
-                                    <?php endif; ?>
-                                    <?php if (empty($product['code']) && empty($product['ean'])): ?>
+                                    <?php else: ?>
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </td>
                             <td><?= e($product['category'] ?? '-') ?></td>
-                            <td>
-                                <?php if ($product['variant_count'] > 0 && isset($product['price_min'])): ?>
-                                    <?php if ($product['price_min'] == $product['price_max']): ?>
-                                        <strong class="text-primary"><?= formatPrice($product['price_min']) ?></strong>
-                                    <?php else: ?>
-                                        <strong class="text-primary"><?= formatPrice($product['price_min']) ?> - <?= formatPrice($product['price_max']) ?></strong>
-                                    <?php endif; ?>
-                                <?php elseif (!empty($product['standard_price'])): ?>
-                                    <strong class="text-primary"><?= formatPrice($product['standard_price']) ?></strong>
-                                <?php else: ?>
-                                    <span class="text-muted">Není zadána</span>
-                                <?php endif; ?>
-                                <?php if (!empty($product['purchase_price'])): ?>
-                                    <br><small class="text-muted">Nákup: <?= formatPrice($product['purchase_price']) ?></small>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php 
-                                $stock = $product['variant_count'] > 0 ? ($product['total_stock'] ?? 0) : $product['stock'];
-                                ?>
-                                <?php if ($stock > 0): ?>
-                                    <span class="badge bg-success"><?= number_format($stock) ?> ks</span>
-                                <?php else: ?>
-                                    <span class="badge bg-danger">Vyprodáno</span>
-                                <?php endif; ?>
-                            </td>
+                            <td><?= e($product['manufacturer'] ?? '-') ?></td>
+                            <td><?= e($product['supplier'] ?? '-') ?></td>
                             <?php if ($auth->isSuperAdmin() && isset($product['user_name'])): ?>
                                 <td>
                                     <small><?= e($product['user_name']) ?></small>

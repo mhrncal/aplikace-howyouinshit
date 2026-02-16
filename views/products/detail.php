@@ -55,6 +55,28 @@
                 </div>
                 <?php endif; ?>
                 
+                <?php if (!empty($product['supplier'])): ?>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Dodavatel:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        <?= e($product['supplier']) ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($product['category'])): ?>
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <strong>Výrobce:</strong>
+                    </div>
+                    <div class="col-md-8">
+                        <?= e($product['manufacturer']) ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <?php if (!empty($product['category'])): ?>
                 <div class="row mb-3">
                     <div class="col-md-4">
@@ -92,12 +114,6 @@
                             <tr>
                                 <th>Název varianty</th>
                                 <th>Kód</th>
-                                <th>EAN</th>
-                                <th class="text-end">Nákupní cena</th>
-                                <th class="text-end">Prodejní cena</th>
-                                <th class="text-end">Akční cena</th>
-                                <th class="text-center">Sklad</th>
-                                <th>Dostupnost</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -111,52 +127,6 @@
                                         <code><?= e($variant['code']) ?></code>
                                     <?php else: ?>
                                         <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if (!empty($variant['ean'])): ?>
-                                        <code><?= e($variant['ean']) ?></code>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end">
-                                    <?php if (!empty($variant['purchase_price'])): ?>
-                                        <span class="text-muted"><?= formatPrice($variant['purchase_price']) ?></span>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end">
-                                    <?php if (!empty($variant['standard_price'])): ?>
-                                        <strong class="text-primary"><?= formatPrice($variant['standard_price']) ?></strong>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-end">
-                                    <?php if (!empty($variant['action_price'])): ?>
-                                        <strong class="text-danger"><?= formatPrice($variant['action_price']) ?></strong>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td class="text-center">
-                                    <?php if (isset($variant['stock'])): ?>
-                                        <?php if ($variant['stock'] > 0): ?>
-                                            <span class="badge bg-success"><?= number_format($variant['stock']) ?> ks</span>
-                                        <?php else: ?>
-                                            <span class="badge bg-danger">0 ks</span>
-                                        <?php endif; ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if (!empty($variant['availability_status'])): ?>
-                                        <span class="badge bg-info"><?= e($variant['availability_status']) ?></span>
-                                    <?php else: ?>
-                                        <span class="badge bg-secondary">Nezadáno</span>
                                     <?php endif; ?>
                                 </td>
                             </tr>
@@ -175,35 +145,6 @@
     </div>
     
     <div class="col-md-4">
-        <!-- Ceny a dostupnost -->
-        <div class="card mb-3">
-            <div class="card-header">
-                <i class="bi bi-tag me-2"></i>Ceny
-            </div>
-            <div class="card-body">
-                <?php if (!empty($product['price'])): ?>
-                <div class="mb-3">
-                    <small class="text-muted">Základní cena:</small>
-                    <h4 class="mb-0"><?= formatPrice($product['price']) ?></h4>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($product['price_vat'])): ?>
-                <div class="mb-3">
-                    <small class="text-muted">Cena s DPH:</small>
-                    <h4 class="mb-0"><?= formatPrice($product['price_vat']) ?></h4>
-                </div>
-                <?php endif; ?>
-                
-                <?php if (!empty($product['availability'])): ?>
-                <div>
-                    <small class="text-muted">Dostupnost:</small><br>
-                    <span class="badge bg-success"><?= e($product['availability']) ?></span>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        
         <!-- Metadata -->
         <div class="card mb-3">
             <div class="card-header">

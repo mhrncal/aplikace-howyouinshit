@@ -56,19 +56,6 @@ class Product
             $variants = $this->getVariants($product['id']);
             $product['variants'] = $variants;
             $product['variant_count'] = count($variants);
-            
-            // Agregace cen a skladu z variant
-            if (!empty($variants)) {
-                $prices = array_filter(array_column($variants, 'standard_price'));
-                $stocks = array_column($variants, 'stock');
-                
-                if (!empty($prices)) {
-                    $product['price_min'] = min($prices);
-                    $product['price_max'] = max($prices);
-                }
-                
-                $product['total_stock'] = array_sum($stocks);
-            }
         }
         
         return [
@@ -292,35 +279,9 @@ class Product
                         $variant['product_id'] = $productId;
                         $variant['created_at'] = date('Y-m-d H:i:s');
                         
-                        // Zajisti povinná pole
+                        // Zajisti povinné pole name
                         if (empty($variant['name'])) {
                             $variant['name'] = 'Varianta';
-                        }
-                        
-                        // Vytvoř parameters JSON pokud neexistuje
-                        if (empty($variant['parameters'])) {
-                            $params = [];
-                            // Zkus vytvořit parameters z názvu varianty
-                            if (!empty($variant['name']) && $variant['name'] !== 'Varianta') {
-                                $params['name'] = $variant['name'];
-                            }
-                            if (!empty($variant['code'])) {
-                                $params['code'] = $variant['code'];
-                            }
-                            $variant['parameters'] = json_encode($params, JSON_UNESCAPED_UNICODE);
-                        } elseif (is_array($variant['parameters'])) {
-                            // Pokud je array, převeď na JSON
-                            $variant['parameters'] = json_encode($variant['parameters'], JSON_UNESCAPED_UNICODE);
-                        }
-                        
-                        // Odstraň nepoužívaná pole
-                        unset($variant['price_vat']);
-                        unset($variant['availability']); // product_variants nemá 'availability', jen 'availability_status'
-                        
-                        // Mapování polí - pokud existuje 'price', přejmenuj na 'standard_price'
-                        if (isset($variant['price']) && !isset($variant['standard_price'])) {
-                            $variant['standard_price'] = $variant['price'];
-                            unset($variant['price']);
                         }
                         
                         try {
