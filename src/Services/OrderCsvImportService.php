@@ -115,8 +115,9 @@ class OrderCsvImportService
                 // První řádek = hlavička
                 if ($header === null) {
                     $header = str_getcsv($line, ';', '"');
-                    // Odstranění BOM
-                    $header[0] = str_replace("\xEF\xBB\xBF", '', $header[0]);
+                    // Odstranění BOM a uvozovek
+                    $header[0] = str_replace(["\xEF\xBB\xBF", '"', "\r"], '', $header[0]);
+                    Logger::info('CSV header parsed', ['columns' => count($header), 'first_col' => $header[0]]);
                     continue;
                 }
                 
@@ -127,15 +128,29 @@ class OrderCsvImportService
                 $row = str_getcsv($line, ';', '"');
                 
                 if (count($row) !== count($header)) {
-                    Logger::warning('CSV line mismatch', ['line' => $lineCount, 'expected' => count($header), 'got' => count($row)]);
+                    Logger::warning('CSV line mismatch', [
+                        'line' => $lineCount, 
+                        'expected' => count($header), 
+                        'got' => count($row)
+                    ]);
                     continue;
                 }
                 
                 $rowData = array_combine($header, $row);
-                $orderCode = $rowData['code'] ?? '';
+                $orderCode = trim($rowData['code'] ?? '');
                 
                 if (empty($orderCode)) {
+                    Logger::warning('Empty order code', ['line' => $lineCount]);
                     continue;
+                }
+                
+                // Log první objednávku pro debug
+                if ($lineCount == 2) {
+                    Logger::info('First order line', [
+                        'order_code' => $orderCode,
+                        'type' => $rowData['orderItemType'] ?? 'N/A',
+                        'name' => substr($rowData['orderItemName'] ?? '', 0, 50)
+                    ]);
                 }
                 
                 // Nová objednávka?
@@ -143,7 +158,7 @@ class OrderCsvImportService
                     $currentOrderData[$orderCode] = [
                         'order' => [
                             'user_id' => $userId,
-                            'order_code' => $rowData['code'],
+                            'order_code' => $orderCode,
                             'order_date' => $rowData['date'],
                             'status' => $rowData['statusName'],
                             'currency' => 'CZK',
@@ -209,6 +224,13 @@ class OrderCsvImportService
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         
+        Logger::info('cURL completed', [
+            'success' => $success,
+            'http_code' => $httpCode,
+            'lines_processed' => $lineCount,
+            'orders_pending' => count($currentOrderData)
+        ]);
+        
         if (!$success) {
             throw new \Exception("cURL error: $error");
         }
@@ -219,21 +241,32 @@ class OrderCsvImportService
         
         // Ulož zbývající data
         if (!empty($currentOrderData)) {
+            Logger::info('Saving remaining orders', ['count' => count($currentOrderData)]);
+            
             foreach ($currentOrderData as $orderCode => $orderDataItem) {
                 try {
                     $orderId = $this->saveOrder($userId, $orderDataItem);
                     if ($orderId) {
                         $ordersProcessed[$orderCode] = $orderId;
                         $itemsImported += count($orderDataItem['items']);
+                        Logger::info('Order saved', ['code' => $orderCode, 'id' => $orderId, 'items' => count($orderDataItem['items'])]);
+                    } else {
+                        Logger::error('saveOrder returned null', ['code' => $orderCode]);
                     }
                 } catch (\Exception $e) {
                     Logger::error('Failed to save order', [
                         'order_code' => $orderCode,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
+                        'trace' => substr($e->getTraceAsString(), 0, 500)
                     ]);
                 }
             }
         }
+        
+        Logger::info('Import completed', [
+            'orders' => count($ordersProcessed),
+            'items' => $itemsImported
+        ]);
         
         return [
             'orders_imported' => count($ordersProcessed),
