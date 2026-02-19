@@ -23,6 +23,7 @@ class XmlImportService
     
     private int $feedSourceId = 0;
     private int $userId = 0;
+    private ?int $storeId = null;
     
     /**
      * Helper pro logování importu (používá kategorii 'import')
@@ -44,11 +45,19 @@ class XmlImportService
     /**
      * Importuje produkty z XML URL - STREAMOVÉ ZPRACOVÁNÍ
      */
-    public function importFromUrl(int $feedSourceId, int $userId, string $url, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
+    public function importFromUrl(int $feedSourceId, int $userId, string $url, ?int $storeId = null, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
     {
         // Ulož pro logging
         $this->feedSourceId = $feedSourceId;
         $this->userId = $userId;
+        
+        // Pokud není storeId, použij výchozí shop uživatele
+        if (!$storeId) {
+            $storeModel = new \App\Models\Store();
+            $defaultStore = $storeModel->getDefaultForUser($userId);
+            $storeId = $defaultStore ? $defaultStore['id'] : null;
+        }
+        $this->storeId = $storeId;
         
         $logId = $this->createImportLog($userId, $feedSourceId);
         
@@ -541,7 +550,10 @@ class XmlImportService
             // Použij FIXNÍ mapping z config
             $mapping = \App\Modules\Products\Config\XmlFieldMapping::getProductMapping();
             
-            $product = ['user_id' => $userId];
+            $product = [
+                'user_id' => $userId,
+                'store_id' => $this->storeId
+            ];
             
             // Automatické mapování podle konfigurace
             foreach ($mapping as $dbColumn => $config) {

@@ -17,37 +17,62 @@ class Product
     }
 
     /**
-     * Získá všechny produkty pro uživatele (s podporou Super Admina)
+     * Získá všechny produkty pro uživatele (s podporou Super Admina a store filtrování)
      */
-    public function getAll(?int $userId, int $page = 1, int $perPage = 20): array
+    public function getAll(?int $userId, int $page = 1, int $perPage = 20, ?int $storeId = null): array
     {
         $offset = ($page - 1) * $perPage;
         
         if ($userId === null || $userId === 0) {
             // Super Admin - vidí vše
+            $where = "1=1";
+            $params = [];
+            
+            if ($storeId) {
+                $where .= " AND p.store_id = ?";
+                $params[] = $storeId;
+            }
+            
             $products = $this->db->fetchAll(
-                "SELECT p.*, u.name as user_name, u.email as user_email 
+                "SELECT p.*, u.name as user_name, u.email as user_email, s.name as store_name
                  FROM products p
                  LEFT JOIN users u ON p.user_id = u.id
+                 LEFT JOIN stores s ON p.store_id = s.id
+                 WHERE {$where}
                  ORDER BY p.created_at DESC 
                  LIMIT ? OFFSET ?",
-                [$perPage, $offset]
-            );
-            
-            $total = $this->db->fetchOne("SELECT COUNT(*) as count FROM products")['count'];
-        } else {
-            // Běžný uživatel - jen své produkty
-            $products = $this->db->fetchAll(
-                "SELECT * FROM products 
-                 WHERE user_id = ? 
-                 ORDER BY created_at DESC 
-                 LIMIT ? OFFSET ?",
-                [$userId, $perPage, $offset]
+                array_merge($params, [$perPage, $offset])
             );
             
             $total = $this->db->fetchOne(
-                "SELECT COUNT(*) as count FROM products WHERE user_id = ?",
-                [$userId]
+                "SELECT COUNT(*) as count FROM products p WHERE {$where}",
+                $params
+            )['count'];
+        } else {
+            // Běžný uživatel - jen své produkty z aktuálního shopu
+            $where = ["user_id = ?"];
+            $params = [$userId];
+            
+            if ($storeId) {
+                $where[] = "store_id = ?";
+                $params[] = $storeId;
+            }
+            
+            $whereClause = implode(' AND ', $where);
+            
+            $products = $this->db->fetchAll(
+                "SELECT p.*, s.name as store_name 
+                 FROM products p
+                 LEFT JOIN stores s ON p.store_id = s.id
+                 WHERE {$whereClause}
+                 ORDER BY created_at DESC 
+                 LIMIT ? OFFSET ?",
+                array_merge($params, [$perPage, $offset])
+            );
+            
+            $total = $this->db->fetchOne(
+                "SELECT COUNT(*) as count FROM products WHERE {$whereClause}",
+                $params
             )['count'];
         }
         

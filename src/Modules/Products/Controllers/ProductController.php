@@ -25,12 +25,13 @@ class ProductController extends Module
         $page = (int) get('page', 1);
         $search = get('search', '');
         $userId = $this->auth->isSuperAdmin() ? null : $this->auth->userId();
+        $storeId = currentStoreId(); // Filtruj podle aktuálního shopu
         
         if (!empty($search)) {
-            $products = $this->productModel->search($this->auth->userId(), $search);
+            $products = $this->productModel->search($this->auth->userId(), $search, $storeId);
             $pagination = null;
         } else {
-            $data = $this->productModel->getAll($userId ?? 0, $page);
+            $data = $this->productModel->getAll($userId ?? 0, $page, 20, $storeId);
             $products = $data['products'];
             $pagination = $data['pagination'];
         }
