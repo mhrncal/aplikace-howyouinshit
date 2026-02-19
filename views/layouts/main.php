@@ -397,6 +397,12 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link <?= strpos($_SERVER['PHP_SELF'] ?? '', '/stores/') !== false ? 'active' : '' ?>" href="/app/stores/">
+                    <i class="bi bi-shop"></i>
+                    <span>Správa e-shopů</span>
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="/app/auth/logout.php">
                     <i class="bi bi-box-arrow-right"></i>
                     <span>Odhlásit se</span>
