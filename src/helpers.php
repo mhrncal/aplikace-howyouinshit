@@ -240,3 +240,61 @@ function paginate(int $total, int $perPage = 20, int $currentPage = 1): array
         'has_prev' => $currentPage > 1,
     ];
 }
+
+/**
+ * ====================================
+ * STORE HELPERS
+ * ====================================
+ */
+
+/**
+ * Získej ID aktuálního shopu
+ */
+function currentStoreId(): ?int
+{
+    return $_SESSION['current_store_id'] ?? null;
+}
+
+/**
+ * Získej aktuální shop
+ */
+function currentStore(): ?array
+{
+    global $currentStore;
+    return $currentStore;
+}
+
+/**
+ * Přepni na jiný shop
+ */
+function switchStore(int $storeId): void
+{
+    global $auth;
+    
+    if (!$auth->check()) {
+        return;
+    }
+    
+    // Ověř že shop patří uživateli
+    $storeModel = new \App\Models\Store();
+    $store = $storeModel->findById($storeId, $auth->userId());
+    
+    if ($store && $store['is_active']) {
+        $_SESSION['current_store_id'] = $storeId;
+    }
+}
+
+/**
+ * Získej všechny shopy aktuálního uživatele
+ */
+function userStores(): array
+{
+    global $auth;
+    
+    if (!$auth->check()) {
+        return [];
+    }
+    
+    $storeModel = new \App\Models\Store();
+    return $storeModel->getActiveForUser($auth->userId());
+}

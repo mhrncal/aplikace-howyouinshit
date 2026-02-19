@@ -409,13 +409,40 @@
     <div class="main-content">
         <div class="top-bar">
             <h1 class="page-title"><?= $title ?? 'Dashboard' ?></h1>
-            <div class="user-info">
-                <?php if ($auth->isSuperAdmin()): ?>
-                    <span class="badge bg-danger">Super Admin</span>
+            <div class="d-flex align-items-center gap-3">
+                <!-- Store Selector -->
+                <?php 
+                $stores = userStores();
+                if (count($stores) > 1): // Zobraz jen když má více shopů
+                ?>
+                <div class="store-selector">
+                    <select class="form-select form-select-sm" id="storeSelector" 
+                            style="min-width: 200px; background: #fff; border: 1px solid #e2e8f0;"
+                            onchange="window.location.href='/app/switch-store.php?store_id='+this.value">
+                        <?php foreach ($stores as $store): ?>
+                            <option value="<?= $store['id'] ?>" 
+                                    <?= $store['id'] == currentStoreId() ? 'selected' : '' ?>>
+                                🏪 <?= e($store['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <?php elseif (count($stores) === 1): ?>
+                <!-- Zobraz název shopu -->
+                <div class="text-muted small">
+                    <i class="bi bi-shop me-1"></i><?= e($stores[0]['name']) ?>
+                </div>
                 <?php endif; ?>
-                <div class="user-badge">
-                    <i class="bi bi-person-circle"></i>
-                    <?= e($auth->user()['name']) ?>
+                
+                <!-- User Info -->
+                <div class="user-info">
+                    <?php if ($auth->isSuperAdmin()): ?>
+                        <span class="badge bg-danger">Super Admin</span>
+                    <?php endif; ?>
+                    <div class="user-badge">
+                        <i class="bi bi-person-circle"></i>
+                        <?= e($auth->user()['name']) ?>
+                    </div>
                 </div>
             </div>
         </div>
