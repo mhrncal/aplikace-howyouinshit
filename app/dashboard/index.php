@@ -32,7 +32,7 @@ if ($isSuperAdmin) {
 $orderModel = new Order();
 $currentMonth = date('Y-m-01');
 $currentMonthEnd = date('Y-m-t');
-$orderAnalytics = $orderModel->getAnalytics($userId, $currentMonth, $currentMonthEnd);
+$orderAnalytics = $orderModel->getAnalytics($userId, $currentMonth, $currentMonthEnd, currentStoreId());
 
 // Analytika nákladů (tento měsíc)
 $costModel = new Cost();

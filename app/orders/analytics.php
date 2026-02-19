@@ -13,9 +13,9 @@ $dateFrom = get('date_from', date('Y-01-01'));
 $dateTo = get('date_to', date('Y-12-31'));
 
 // Analytika
-$analytics = $orderModel->getAnalytics($userId, $dateFrom, $dateTo);
-$topProducts = $orderModel->getTopProducts($userId, 15, $dateFrom, $dateTo);
-$monthlyTrends = $orderModel->getMonthlyTrends($userId, $year);
+$analytics = $orderModel->getAnalytics($userId, $dateFrom, $dateTo, currentStoreId());
+$topProducts = $orderModel->getTopProducts($userId, 15, $dateFrom, $dateTo, currentStoreId());
+$monthlyTrends = $orderModel->getMonthlyTrends($userId, $year, currentStoreId());
 
 // Připrav data pro graf
 $months = range(1, 12);

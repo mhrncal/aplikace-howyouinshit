@@ -7,6 +7,7 @@ use App\Models\Order;
 $orderModel = new Order();
 $userId = $auth->userId();
 $page = (int) get('page', 1);
+$storeId = currentStoreId(); // Aktuální shop
 
 // Filtry
 $filters = [];
@@ -15,12 +16,12 @@ if (!empty(get('date_from'))) $filters['date_from'] = get('date_from');
 if (!empty(get('date_to'))) $filters['date_to'] = get('date_to');
 if (!empty(get('source'))) $filters['source'] = get('source');
 
-$data = $orderModel->getAll($userId, $page, 50, $filters);
+$data = $orderModel->getAll($userId, $page, 50, $filters, $storeId);
 $orders = $data['orders'];
 $pagination = $data['pagination'];
 
 // Analytika
-$analytics = $orderModel->getAnalytics($userId, $filters['date_from'] ?? null, $filters['date_to'] ?? null);
+$analytics = $orderModel->getAnalytics($userId, $filters['date_from'] ?? null, $filters['date_to'] ?? null, $storeId);
 
 $title = 'Objednávky a analytika';
 ob_start();
