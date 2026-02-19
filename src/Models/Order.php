@@ -19,12 +19,18 @@ class Order
     /**
      * Všechny objednávky
      */
-    public function getAll(int $userId, int $page = 1, int $perPage = 50, array $filters = []): array
+    public function getAll(int $userId, int $page = 1, int $perPage = 50, array $filters = [], ?int $storeId = null): array
     {
         $offset = ($page - 1) * $perPage;
         
         $where = ["user_id = ?"];
         $params = [$userId];
+        
+        // Store filtr
+        if ($storeId) {
+            $where[] = "store_id = ?";
+            $params[] = $storeId;
+        }
         
         // Filtry
         if (!empty($filters['status'])) {
@@ -148,10 +154,15 @@ class Order
     /**
      * Analytika - celkové přehledy
      */
-    public function getAnalytics(int $userId, ?string $dateFrom = null, ?string $dateTo = null): array
+    public function getAnalytics(int $userId, ?string $dateFrom = null, ?string $dateTo = null, ?int $storeId = null): array
     {
         $where = ["user_id = ?"];
         $params = [$userId];
+        
+        if ($storeId) {
+            $where[] = "store_id = ?";
+            $params[] = $storeId;
+        }
         
         if ($dateFrom) {
             $where[] = "order_date >= ?";
@@ -213,10 +224,15 @@ class Order
     /**
      * TOP produkty podle zisku
      */
-    public function getTopProducts(int $userId, int $limit = 10, ?string $dateFrom = null, ?string $dateTo = null): array
+    public function getTopProducts(int $userId, int $limit = 10, ?string $dateFrom = null, ?string $dateTo = null, ?int $storeId = null): array
     {
         $where = ["o.user_id = ?", "oi.item_type = 'product'"];
         $params = [$userId];
+        
+        if ($storeId) {
+            $where[] = "o.store_id = ?";
+            $params[] = $storeId;
+        }
         
         if ($dateFrom) {
             $where[] = "o.order_date >= ?";
@@ -254,8 +270,18 @@ class Order
     /**
      * Měsíční trendy
      */
-    public function getMonthlyTrends(int $userId, int $year): array
+    public function getMonthlyTrends(int $userId, int $year, ?int $storeId = null): array
     {
+        $where = ["user_id = ?", "YEAR(order_date) = ?", "status != 'Stornována'"];
+        $params = [$userId, $year];
+        
+        if ($storeId) {
+            $where[] = "store_id = ?";
+            $params[] = $storeId;
+        }
+        
+        $whereClause = implode(' AND ', $where);
+        
         return $this->db->fetchAll(
             "SELECT 
                 MONTH(order_date) as month,
@@ -265,12 +291,10 @@ class Order
                 SUM(total_profit) as profit,
                 AVG(margin_percent) as avg_margin
              FROM orders 
-             WHERE user_id = ? 
-               AND YEAR(order_date) = ?
-               AND status != 'Stornována'
+             WHERE {$whereClause}
              GROUP BY MONTH(order_date)
              ORDER BY month",
-            [$userId, $year]
+            $params
         );
     }
 }

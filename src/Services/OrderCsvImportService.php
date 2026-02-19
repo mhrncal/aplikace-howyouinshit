@@ -17,6 +17,7 @@ class OrderCsvImportService
     private $orderModel;
     private $shippingModel;
     private $billingModel;
+    private $storeId;
 
     public function __construct()
     {
@@ -29,13 +30,21 @@ class OrderCsvImportService
     /**
      * Importuje objednávky z CSV URL - STREAMOVĚ
      */
-    public function importFromUrl(int $userId, string $url, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
+    public function importFromUrl(int $userId, string $url, ?int $storeId = null, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
     {
         try {
             $startTime = microtime(true);
             $startMemory = memory_get_usage();
             
-            Logger::info('Starting order CSV import', ['user_id' => $userId, 'url' => $url]);
+            // Pokud není storeId, použij výchozí shop
+            if (!$storeId) {
+                $storeModel = new \App\Models\Store();
+                $defaultStore = $storeModel->getDefaultForUser($userId);
+                $storeId = $defaultStore ? $defaultStore['id'] : null;
+            }
+            $this->storeId = $storeId;
+            
+            Logger::info('Starting order CSV import', ['user_id' => $userId, 'store_id' => $storeId, 'url' => $url]);
             
             // STREAMOVÉ zpracování - nestahuje celý soubor do paměti
             $result = $this->parseStreamCsv($userId, $url, $httpAuthUser, $httpAuthPass);
@@ -158,6 +167,7 @@ class OrderCsvImportService
                     $currentOrderData[$orderCode] = [
                         'order' => [
                             'user_id' => $userId,
+                            'store_id' => $this->storeId,
                             'order_code' => $orderCode,
                             'order_date' => $rowData['date'],
                             'status' => $rowData['statusName'],
