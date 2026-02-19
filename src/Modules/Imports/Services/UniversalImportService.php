@@ -16,19 +16,25 @@ class UniversalImportService
      */
     public function import(int $feedSourceId, int $userId, string $url, string $feedType, ?string $httpAuthUser = null, ?string $httpAuthPass = null): array
     {
+        // Získej store_id z feed_sources
+        $feedSourceModel = new \App\Modules\FeedSources\Models\FeedSource();
+        $feedSource = $feedSourceModel->findById($feedSourceId, $userId);
+        $storeId = $feedSource['store_id'] ?? null;
+        
         Logger::info('Universal import started', [
             'feed_source_id' => $feedSourceId,
             'user_id' => $userId,
+            'store_id' => $storeId,
             'feed_type' => $feedType
         ]);
         
         // Podle typu feedu zvol správný parser
         // Support pro starý i nový formát
         $result = match($feedType) {
-            'shoptet_products', 'products_xml', 'shoptet', 'xml' => $this->importProducts($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
-            'shoptet_orders', 'orders_xml' => $this->importOrders($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
-            'shoptet_stock', 'stock_xml' => $this->importStock($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
-            'shoptet_prices', 'prices_xml' => $this->importPrices($feedSourceId, $userId, $url, $httpAuthUser, $httpAuthPass),
+            'shoptet_products', 'products_xml', 'shoptet', 'xml' => $this->importProducts($feedSourceId, $userId, $storeId, $url, $httpAuthUser, $httpAuthPass),
+            'shoptet_orders', 'orders_xml' => $this->importOrders($feedSourceId, $userId, $storeId, $url, $httpAuthUser, $httpAuthPass),
+            'shoptet_stock', 'stock_xml' => $this->importStock($feedSourceId, $userId, $storeId, $url, $httpAuthUser, $httpAuthPass),
+            'shoptet_prices', 'prices_xml' => $this->importPrices($feedSourceId, $userId, $storeId, $url, $httpAuthUser, $httpAuthPass),
             default => throw new \Exception("Neznámý typ feedu: {$feedType}. Podporované: shoptet_products, shoptet_orders, shoptet_stock, shoptet_prices")
         };
         
@@ -43,7 +49,7 @@ class UniversalImportService
     /**
      * Import produktů
      */
-    private function importProducts(int $feedSourceId, int $userId, string $url, ?string $httpAuthUser, ?string $httpAuthPass): array
+    private function importProducts(int $feedSourceId, int $userId, ?int $storeId, string $url, ?string $httpAuthUser, ?string $httpAuthPass): array
     {
         $xmlImportService = new \App\Modules\Products\Services\XmlImportService();
         
@@ -51,6 +57,7 @@ class UniversalImportService
             $feedSourceId,
             $userId,
             $url,
+            $storeId,
             $httpAuthUser,
             $httpAuthPass
         );
@@ -59,7 +66,7 @@ class UniversalImportService
     /**
      * Import objednávek
      */
-    private function importOrders(int $feedSourceId, int $userId, string $url, ?string $httpAuthUser, ?string $httpAuthPass): array
+    private function importOrders(int $feedSourceId, int $userId, ?int $storeId, string $url, ?string $httpAuthUser, ?string $httpAuthPass): array
     {
         // TODO: Implementovat OrderXmlParser
         Logger::info('Order import not yet implemented');
@@ -74,7 +81,7 @@ class UniversalImportService
     /**
      * Import skladů
      */
-    private function importStock(int $feedSourceId, int $userId, string $url, ?string $httpAuthUser, ?string $httpAuthPass): array
+    private function importStock(int $feedSourceId, int $userId, ?int $storeId, string $url, ?string $httpAuthUser, ?string $httpAuthPass): array
     {
         // TODO: Implementovat StockXmlParser
         Logger::info('Stock import not yet implemented');
@@ -89,7 +96,7 @@ class UniversalImportService
     /**
      * Import cen
      */
-    private function importPrices(int $feedSourceId, int $userId, string $url, ?string $httpAuthUser, ?string $httpAuthPass): array
+    private function importPrices(int $feedSourceId, int $userId, ?int $storeId, string $url, ?string $httpAuthUser, ?string $httpAuthPass): array
     {
         // TODO: Implementovat PriceXmlParser
         Logger::info('Price import not yet implemented');
