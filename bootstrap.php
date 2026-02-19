@@ -53,6 +53,35 @@ ini_set('max_execution_time', (string) $config['import']['max_execution_time']);
 // Global instances
 $auth = new App\Core\Auth();
 
+// Store context - nastav aktuální shop
+$currentStore = null;
+if ($auth->check()) {
+    $storeModel = new App\Models\Store();
+    
+    // Pokud není vybrán store, vyber první aktivní
+    if (empty($_SESSION['current_store_id'])) {
+        $defaultStore = $storeModel->getDefaultForUser($auth->userId());
+        if ($defaultStore) {
+            $_SESSION['current_store_id'] = $defaultStore['id'];
+        }
+    }
+    
+    // Načti aktuální store
+    if (!empty($_SESSION['current_store_id'])) {
+        $currentStore = $storeModel->findById($_SESSION['current_store_id'], $auth->userId());
+        
+        // Pokud store neexistuje nebo není uživatele, vynuluj
+        if (!$currentStore) {
+            unset($_SESSION['current_store_id']);
+            $defaultStore = $storeModel->getDefaultForUser($auth->userId());
+            if ($defaultStore) {
+                $_SESSION['current_store_id'] = $defaultStore['id'];
+                $currentStore = $defaultStore;
+            }
+        }
+    }
+}
+
 // Cleanup starých logů (1x denně)
 if (!isset($_SESSION['last_log_cleanup']) || $_SESSION['last_log_cleanup'] < strtotime('today')) {
     App\Core\Logger::cleanOldLogs(30);
