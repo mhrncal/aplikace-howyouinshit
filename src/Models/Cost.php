@@ -14,14 +14,20 @@ class Cost
     }
 
     /**
-     * Všechny náklady
+     * Všechny náklady (s podporou global vs store scope)
      */
-    public function getAll(int $userId, int $page = 1, int $perPage = 20, array $filters = []): array
+    public function getAll(int $userId, int $page = 1, int $perPage = 20, array $filters = [], ?int $storeId = null): array
     {
         $offset = ($page - 1) * $perPage;
         
         $where = ["user_id = ?"];
         $params = [$userId];
+        
+        // Store filtr: zobraz globální náklady + náklady pro tento shop
+        if ($storeId) {
+            $where[] = "(scope = 'global' OR (scope = 'store' AND store_id = ?))";
+            $params[] = $storeId;
+        }
         
         if (!empty($filters['type'])) {
             $where[] = "type = ?";

@@ -298,3 +298,26 @@ function userStores(): array
     $storeModel = new \App\Models\Store();
     return $storeModel->getActiveForUser($auth->userId());
 }
+
+/**
+ * Získej store_id pro použití v queries
+ * Pokud není zadán, použije aktuální
+ */
+function getStoreIdForQuery(?int $storeId = null): ?int
+{
+    return $storeId ?? currentStoreId();
+}
+
+/**
+ * Přidej store_id do dat před insert/update
+ */
+function addStoreToData(array $data, ?int $storeId = null): array
+{
+    $storeId = getStoreIdForQuery($storeId);
+    
+    if ($storeId !== null && !isset($data['store_id'])) {
+        $data['store_id'] = $storeId;
+    }
+    
+    return $data;
+}
